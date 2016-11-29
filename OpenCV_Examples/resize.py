@@ -1,38 +1,50 @@
 import os
 import cv2
+import shutil
 
+train_folder_dir = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/"
 
 def resize_image(image_file_name, width, height):
 
     cv2_image = cv2.imread(image_file_name)
     res = cv2.resize(cv2_image, (width, height), interpolation=cv2.INTER_CUBIC)
 
-    new_image_file_name = image_file_name.replace(".jpg", "_"+ str(width) + "_x_" + str(height) + ".jpg")
-    cv2.imwrite(new_image_file_name, res)
-
+    return res
 
 def transform_images(image_directories, width, height):
 
     n_folders = len(image_directories)
     for i in range(n_folders):
-        print("We are at: " + image_directories[i])
-        os.chdir(image_directories[i])
-        image_list = os.listdir()
 
+        directory_for_resized_images = train_folder_dir + image_directories[i] + "_" + str(width) + "_x_" + str(height)
+        if os.path.isdir(directory_for_resized_images) != True:
+            os.mkdir(directory_for_resized_images)
+        else:
+            shutil.rmtree(directory_for_resized_images)
+            os.mkdir(directory_for_resized_images)
+
+        print("We are at: " + image_directories[i])
+        os.chdir(train_folder_dir + image_directories[i])
+
+        image_list = os.listdir()
         n_files = len(image_list)
         for j in range(n_files):
-            resize_image(image_list[j], width, height)
+            image_file_name = image_list[j]
+            res = resize_image(image_file_name, width, height)
+
+            new_image_file_name = image_file_name.replace(".jpg", "_" + str(width) + "_x_" + str(height) + ".jpg")
+            cv2.imwrite(directory_for_resized_images + "/" + new_image_file_name, res)
 
 
 image_directories = [
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/ALB",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/BET",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/DOL",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/LAG",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/NoF",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/OTHER",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/SHARK",
-    "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/YFT"
+    "ALB",
+    "BET",
+    "DOL",
+    "LAG",
+    "NoF",
+    "OTHER",
+    "SHARK",
+    "YFT"
     ]
 
 
