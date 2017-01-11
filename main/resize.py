@@ -6,52 +6,12 @@ import random
 import cv2
 import numpy as np
 
-
-train_folder_dir = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/"
-
-
-class ImageAnnotation:
-
-    def prase_annotations(self, annotations):
-        N = len(annotations)
-
-        rects = [[0, 0, 0, 0] for i in range(N)]
-        for i in range(N):
-            rects[i][0] = annotations[i]["x"]
-            rects[i][1] = annotations[i]["y"]
-            rects[i][2] = annotations[i]["width"]
-            rects[i][3] = annotations[i]["height"]
-
-        return rects
-
-    def __init__(self, image_annotations):
-        self.file_name = image_annotations["filename"]
-        self.rects = self.prase_annotations(image_annotations["annotations"])
-
-    def __str__(self):
-        s = "Filename: " + str(self.file_name) + "\n"
-        s = s + ("Number of rectangles: " + str(len(self.rects))) + "\n"
-        for i in range(len(self.rects)):
-            x = self.rects[i][0]
-            y = self.rects[i][1]
-            w = self.rects[i][2]
-            h = self.rects[i][3]
-            s = s + "x: %6s y: %6s w: %6s h: %6s\n" % (x, y, w, h)
-        return s
+import global_variable as gv
 
 
-def rectangle_transform(x, y, w, h, sx, sy, rfx, rfy):
-    nx = int(rfx*x) + sx
-    ny = int(rfy*y) + sy
-
-    bx = int(rfx*(x+w)) + sx
-    by = int(rfy*(y+h)) + sy
-
-    nw = abs(nx - bx)
-    nh = abs(ny - by)
-
-    return nx, ny, nw, nh
-
+random.seed(gv.RANDOM_SEED_PYTHON)
+np.random.seed(gv.RANDOM_SEED_NUMPY)
+train_folder_dir = gv.train_folder_dir
 
 def get_eigen(image_directories_for_color_perturbation):
 
@@ -83,7 +43,7 @@ def get_eigen(image_directories_for_color_perturbation):
         else:
             pass
 
-        random.seed(11)
+
         image_list = random.sample(image_list, int(ratio*N))
 
         imgs = np.empty(len(image_list), dtype=object)
@@ -130,7 +90,7 @@ def get_eigen(image_directories_for_color_perturbation):
 
             rows, cols, ch = img.shape
 
-            addition = np.dot(v, np.transpose((0.1 * np.random.randn(3)) * w))
+            addition = np.dot(v, np.transpose((gv.COLOR_PERTURBATION_STD * np.random.randn(3)) * w))
 
             a_img = np.zeros((rows, cols, ch))
             a_img[:, :, 0] = addition[0]
@@ -205,7 +165,7 @@ def transform_images__resize_and_shift(annotation_files, shifts_and_resize_facto
 
 
         for an in annotations:
-            iman = ImageAnnotation(an)
+            iman = gv.ImageAnnotation(an)
             #print(iman)
 
             rects = iman.rects
@@ -228,7 +188,7 @@ def transform_images__resize_and_shift(annotation_files, shifts_and_resize_facto
                     w0 = rec[2]
                     h0 = rec[3]
 
-                    nx, ny, nw, nh = rectangle_transform(x0, y0, w0, h0, sx, sy, rfx, rfy)
+                    nx, ny, nw, nh = gv.rectangle_transform(x0, y0, w0, h0, sx, sy, rfx, rfy)
 
                     image_dict = {"class": "rect",
                                   "height": nh,

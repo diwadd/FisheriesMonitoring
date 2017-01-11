@@ -1,322 +1,538 @@
+import time
+
+import numpy as np
 import tensorflow as tf
 
+import global_variable as gv
+
+# Set Tensorflow seed so we have reproducible results.
+tf.set_random_seed(gv.TENSORFLOW_RANDOM_STATE)
+
+
 def weight_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=0.1)
-  return tf.Variable(initial)
+  initial = tf.truncated_normal(shape, stddev=0.005, dtype=tf.float32)
+  return tf.Variable(initial, dtype=tf.float32)
 
 def bias_variable(shape):
-  initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+  initial = tf.constant(0.005, shape=shape, dtype=tf.float32)
+  return tf.Variable(initial, dtype=tf.float32)
 
 
-def cnn_12_model(x_image, verbose=False):
+class NeuralNetworkFishDetection:
 
-    # Dropout probabilities
-    dropout_one= 0.1
-    dropout_two= 0.1
-    dropout_three= 0.1
-    dropout_four= 0.1
-    dropout_five= 0.1
-    dropout_six= 0.1
-    dropout_seven= 0.1
-    dropout_eight= 0.1
-    dropout_nine= 0.1
-    dropout_ten= 0.1
-    dropout_eleven= 0.1
-    dropout_twelve= 0.1
+    def network_model_reg_small(self, rfx, rfy, channels, dropout_list):
+        """
+        This is a regression type network with the following structure:
 
-    # 1st conv layer
-    kernel_one = tf.Variable(tf.random_normal([32, 32, 3, 64]))
-    bias_one = tf.Variable(tf.random_normal([64]))
-    conv_layer_one = tf.nn.relu(tf.nn.conv2d(x_image, kernel_one, strides=[1, 1, 1, 1], padding='SAME') + bias_one)
-    conv_layer_one_drop = tf.nn.dropout(conv_layer_one, dropout_one)
-
-    # 2nd conv layer
-    kernel_two = tf.Variable(tf.random_normal([32, 32, 64, 64]))
-    bias_two = tf.Variable(tf.random_normal([64]))
-    conv_layer_two = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_one_drop, kernel_two, strides=[1, 1, 1, 1], padding='SAME') + bias_two)
-    conv_layer_two_drop = tf.nn.dropout(conv_layer_two, dropout_two)
-
-    # 3rd conv layer
-    kernel_three = tf.Variable(tf.random_normal([32, 32, 64, 64]))
-    bias_three = tf.Variable(tf.random_normal([64]))
-    conv_layer_three = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_two_drop, kernel_three, strides=[1, 2, 2, 1], padding='SAME') + bias_three)
-    conv_layer_three_drop = tf.nn.dropout(conv_layer_three, dropout_three)
-
-    # 4th conv layer
-    kernel_four = tf.Variable(tf.random_normal([4, 4, 64, 192]))
-    bias_four = tf.Variable(tf.random_normal([192]))
-    conv_layer_four = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_three_drop, kernel_four, strides=[1, 1, 1, 1], padding='SAME') + bias_four)
-    conv_layer_four_drop = tf.nn.dropout(conv_layer_four, dropout_four)
-
-    # 5th conv layer
-    kernel_five = tf.Variable(tf.random_normal([4, 4, 192, 192]))
-    bias_five = tf.Variable(tf.random_normal([192]))
-    conv_layer_five = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_four_drop, kernel_five, strides=[1, 1, 1, 1], padding='SAME') + bias_five)
-    conv_layer_five_drop = tf.nn.dropout(conv_layer_five, dropout_five)
-
-    # 6th conv layer
-    kernel_six = tf.Variable(tf.random_normal([4, 4, 192, 192]))
-    bias_six = tf.Variable(tf.random_normal([192]))
-    conv_layer_six = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_five_drop, kernel_six, strides=[1, 2, 2, 1], padding='SAME') + bias_six)
-    conv_layer_six_drop = tf.nn.dropout(conv_layer_six, dropout_six)
-
-    # 7th conv layer
-    kernel_seven = tf.Variable(tf.random_normal([4, 4, 192, 256]))
-    bias_seven = tf.Variable(tf.random_normal([256]))
-    conv_layer_seven = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_six_drop, kernel_seven, strides=[1, 1, 1, 1], padding='SAME') + bias_seven)
-    conv_layer_seven_drop = tf.nn.dropout(conv_layer_seven, dropout_seven)
-
-    # 8th conv layer
-    kernel_eight = tf.Variable(tf.random_normal([4, 4, 256, 512]))
-    bias_eight = tf.Variable(tf.random_normal([512]))
-    conv_layer_eight = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_seven_drop, kernel_eight, strides=[1, 2, 2, 1], padding='SAME') + bias_eight)
-    conv_layer_eight_drop = tf.nn.dropout(conv_layer_eight, dropout_eight)
-
-    # 9th conv layer
-    kernel_nine = tf.Variable(tf.random_normal([4, 4, 512, 512]))
-    bias_nine = tf.Variable(tf.random_normal([512]))
-    conv_layer_nine = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_eight_drop, kernel_nine, strides=[1, 1, 1, 1], padding='SAME') + bias_nine)
-    conv_layer_nine_drop = tf.nn.dropout(conv_layer_nine, dropout_nine)
-
-    # 10th conv layer
-    kernel_ten = tf.Variable(tf.random_normal([4, 4, 512, 512]))
-    bias_ten = tf.Variable(tf.random_normal([512]))
-    conv_layer_ten = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_nine_drop, kernel_ten, strides=[1, 2, 2, 1], padding='SAME') + bias_ten)
-    conv_layer_ten_drop = tf.nn.dropout(conv_layer_ten, dropout_ten)
-
-    # 11th conv layer
-    kernel_eleven = tf.Variable(tf.random_normal([4, 4, 512, 512]))
-    bias_eleven = tf.Variable(tf.random_normal([512]))
-    conv_layer_eleven = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_ten_drop, kernel_eleven, strides=[1, 1, 1, 1], padding='SAME') + bias_eleven)
-    conv_layer_eleven_drop = tf.nn.dropout(conv_layer_eleven, dropout_eleven)
-
-    # 12th conv layer
-    kernel_twelve = tf.Variable(tf.random_normal([4, 4, 512, 1024]))
-    bias_twelve = tf.Variable(tf.random_normal([1024]))
-    conv_layer_twelve = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_eleven_drop, kernel_twelve, strides=[1, 2, 2, 1], padding='SAME') + bias_twelve)
-    conv_layer_twelve_drop = tf.nn.dropout(conv_layer_twelve, dropout_twelve)
-
-    # Fully connected layer
-    conv_layer_twelve_drop_array = tf.reshape(conv_layer_twelve_drop, [-1, 16 * 16 * 1024])
-    matrix_final = weight_variable([16 * 16 * 1024, 8])
-    bias_final = bias_variable([8])
-
-    # Network output
-    y_conv = tf.matmul(conv_layer_twelve_drop_array, matrix_final) + bias_final
-
-    if verbose == True:
-        print("conv_layer_one size: " + str(conv_layer_one.get_shape()))
-        print("conv_layer_two size: " + str(conv_layer_two.get_shape()))
-        print("conv_layer_three size: " + str(conv_layer_three.get_shape()))
-        print("conv_layer_four size: " + str(conv_layer_four.get_shape()))
-        print("conv_layer_five size: " + str(conv_layer_five.get_shape()))
-        print("conv_layer_six size: " + str(conv_layer_six.get_shape()))
-        print("conv_layer_seven size: " + str(conv_layer_seven.get_shape()))
-        print("conv_layer_eight size: " + str(conv_layer_eight.get_shape()))
-        print("conv_layer_nine size: " + str(conv_layer_nine.get_shape()))
-        print("conv_layer_ten size: " + str(conv_layer_ten.get_shape()))
-        print("conv_layer_eleven size: " + str(conv_layer_eleven.get_shape()))
-        print("conv_layer_twelve size: " + str(conv_layer_twelve.get_shape()))
-
-    return y_conv
+        conv_layer_one_dropped:    (?, 180, 320,  8)
+        conv_layer_two_dropped:    (?,  90, 160, 16)
+        conv_layer_three_dropped:  (?,  90, 160, 16)
+        conv_layer_four_dropped:   (?,  45,  80, 16)
+        conv_layer_five_dropped:   (?,  23,  40, 16)
 
 
-def cnn_7_model(x_image, verbose=False):
+        :param rfx: scaling factor in the x direction
+        :param rfy: scaling factor in the x direction
+        :param channels: number of channels in the input image
+        :param dropout_list: array of dropout probabilities for each layer
+        :return: none
+        """
 
-    # Dropout probabilities
-    dropout_one= 0.1
-    dropout_two= 0.1
-    dropout_three= 0.1
-    dropout_four= 0.1
-    dropout_five= 0.1
-    dropout_six= 0.1
-    dropout_seven= 0.1
+        self.epsilon = gv.EPSILON_BN
 
-    # 1st conv layer
-    kernel_one = tf.Variable(tf.random_normal([5, 5, 3, 64]))
-    bias_one = tf.Variable(tf.random_normal([64]))
-    conv_layer_one = tf.nn.relu(
-        tf.nn.conv2d(x_image, kernel_one, strides=[1, 1, 1, 1], padding='SAME') + bias_one)
-    conv_layer_one_drop = tf.nn.dropout(conv_layer_one, dropout_one)
+        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
+        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
 
-    # 2nd conv layer
-    kernel_two = tf.Variable(tf.random_normal([9, 9, 64, 128]))
-    bias_two = tf.Variable(tf.random_normal([128]))
-    conv_layer_two = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_one_drop, kernel_two, strides=[1, 4, 4, 1], padding='SAME') + bias_two)
-    conv_layer_two_drop = tf.nn.dropout(conv_layer_two, dropout_two)
+        self.rfx = rfx
+        self.rfy = rfy
+        self.width = iw
+        self.height = ih
+        self.channels = channels
+        self.dropout_list = dropout_list
+        self.dropout_one = tf.placeholder(tf.float32)
+        self.dropout_two = tf.placeholder(tf.float32)
+        self.dropout_three = tf.placeholder(tf.float32)
+        self.dropout_four = tf.placeholder(tf.float32)
+        self.dropout_five = tf.placeholder(tf.float32)
 
-    # 3rd conv layer
-    kernel_three = tf.Variable(tf.random_normal([3, 3, 128, 128]))
-    bias_three = tf.Variable(tf.random_normal([128]))
-    conv_layer_three = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_two_drop, kernel_three, strides=[1, 1, 1, 1], padding='SAME') + bias_three)
-    conv_layer_three_drop = tf.nn.dropout(conv_layer_three, dropout_three)
+        self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
+        self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
 
-    # 4th conv layer
-    kernel_four = tf.Variable(tf.random_normal([3, 3, 128, 256]))
-    bias_four = tf.Variable(tf.random_normal([256]))
-    conv_layer_four = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_three_drop, kernel_four, strides=[1, 2, 2, 1], padding='SAME') + bias_four)
-    conv_layer_four_drop = tf.nn.dropout(conv_layer_four, dropout_four)
+        kernel_one = weight_variable([5, 5, 3, 8])
+        bias_one = bias_variable([8])
 
-    # 5th conv layer
-    kernel_five = tf.Variable(tf.random_normal([3, 3, 256, 512]))
-    bias_five = tf.Variable(tf.random_normal([512]))
-    conv_layer_five = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_four_drop, kernel_five, strides=[1, 1, 1, 1], padding='SAME') + bias_five)
-    #dropout_five = tf.placeholder(tf.float32)
-    conv_layer_five_drop = tf.nn.dropout(conv_layer_five, dropout_five)
+        conv_one = tf.nn.conv2d(self.network_input, kernel_one, strides=[1, 1, 1, 1], padding='SAME') + bias_one
+        mean_one, vari_one = tf.nn.moments(conv_one, [0])
+        scale_one = tf.Variable(tf.ones([8], dtype=tf.float32), dtype=tf.float32)
+        beta_one = tf.Variable(tf.zeros([8], dtype=tf.float32), dtype=tf.float32)
+        bn_one = tf.nn.batch_normalization(conv_one, mean_one, vari_one, beta_one, scale_one, self.epsilon)
 
-    # 6th conv layer
-    kernel_six = tf.Variable(tf.random_normal([3, 3, 512, 1024]))
-    bias_six = tf.Variable(tf.random_normal([1024]))
-    conv_layer_six = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_five_drop, kernel_six, strides=[1, 2, 2, 1], padding='SAME') + bias_six)
-    #dropout_six = tf.placeholder(tf.float32)
-    conv_layer_six_drop = tf.nn.dropout(conv_layer_six, dropout_six)
+        conv_layer_one = tf.nn.relu(bn_one)
+        conv_layer_one_dropped = tf.nn.dropout(conv_layer_one, self.dropout_one)
 
-    # 7th conv layer
-    kernel_seven = tf.Variable(tf.random_normal([3, 3, 1024, 2048]))
-    bias_seven = tf.Variable(tf.random_normal([2048]))
-    conv_layer_seven = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_six_drop, kernel_seven, strides=[1, 2, 2, 1], padding='SAME') + bias_seven)
-    #dropout_seven = tf.placeholder(tf.float32)
-    conv_layer_seven_drop = tf.nn.dropout(conv_layer_seven, dropout_seven)
+        print("conv_layer_one_dropped: " + str((conv_layer_one_dropped).get_shape()))
 
-    # Fully connected layer
-    conv_layer_twelve_drop_array = tf.reshape(conv_layer_seven_drop, [-1, 16 * 16 * 2048])
-    matrix_final = weight_variable([16 * 16 * 2048, 8])
-    bias_final = bias_variable([8])
+        kernel_two = weight_variable([5, 5, 8, 16])
+        bias_two = bias_variable([16])
 
-    # Network output
-    y_conv = tf.matmul(conv_layer_twelve_drop_array, matrix_final) + bias_final
+        conv_two = tf.nn.conv2d(conv_layer_one_dropped, kernel_two, strides=[1, 2, 2, 1], padding='SAME') + bias_two
+        mean_two, vari_two = tf.nn.moments(conv_two, [0])
+        scale_two = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_two = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_two = tf.nn.batch_normalization(conv_two, mean_two, vari_two, beta_two, scale_two, self.epsilon)
 
-    if verbose == True:
-        print("conv_layer_one size: " + str(conv_layer_one.get_shape()))
-        print("conv_layer_two size: " + str(conv_layer_two.get_shape()))
-        print("conv_layer_three size: " + str(conv_layer_three.get_shape()))
-        print("conv_layer_four size: " + str(conv_layer_four.get_shape()))
-        print("conv_layer_five size: " + str(conv_layer_five.get_shape()))
-        print("conv_layer_six size: " + str(conv_layer_six.get_shape()))
-        print("conv_layer_seven size: " + str(conv_layer_seven.get_shape()))
+        conv_layer_two = tf.nn.relu(bn_two)
+        conv_layer_two_dropped = tf.nn.dropout(conv_layer_two, self.dropout_two)
 
-    return y_conv
+        print("conv_layer_two_dropped: " + str((conv_layer_two_dropped).get_shape()))
+
+        kernel_three = weight_variable([5, 5, 16, 16])
+        bias_three = bias_variable([16])
+
+        conv_three = tf.nn.conv2d(conv_layer_two_dropped, kernel_three, strides=[1, 1, 1, 1], padding='SAME') + bias_three
+        mean_three, vari_three = tf.nn.moments(conv_three, [0])
+        scale_three = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_three = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_three = tf.nn.batch_normalization(conv_three, mean_three, vari_three, beta_three, scale_three, self.epsilon)
+
+        conv_layer_three = tf.nn.relu(bn_three)
+        conv_layer_three_dropped = tf.nn.dropout(conv_layer_three, self.dropout_three)
+
+        print("conv_layer_three_dropped: " + str((conv_layer_three_dropped).get_shape()))
+
+        kernel_four = weight_variable([5, 5, 16, 16])
+        bias_four = bias_variable([16])
+
+        conv_four = tf.nn.conv2d(conv_layer_three_dropped, kernel_four, strides=[1, 2, 2, 1], padding='SAME') + bias_four
+        mean_four, vari_four = tf.nn.moments(conv_four, [0])
+        scale_four = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_four = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_four = tf.nn.batch_normalization(conv_four, mean_four, vari_four, beta_four, scale_four, self.epsilon)
+
+        conv_layer_four = tf.nn.relu(bn_four)
+        conv_layer_four_dropped = tf.nn.dropout(conv_layer_four, self.dropout_four)
+
+        print("conv_layer_four_dropped: " + str((conv_layer_four_dropped).get_shape()))
+
+        kernel_five = weight_variable([5, 5, 16, 16])
+        bias_five = bias_variable([16])
+
+        conv_five = tf.nn.conv2d(conv_layer_four_dropped, kernel_five, strides=[1, 2, 2, 1], padding='SAME') + bias_five
+        mean_five, vari_five = tf.nn.moments(conv_five, [0])
+        scale_five = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_five = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_five = tf.nn.batch_normalization(conv_five, mean_five, vari_five, beta_five, scale_five, self.epsilon)
+
+        conv_layer_five = tf.nn.relu(bn_five)
+        conv_layer_five_dropped = tf.nn.dropout(conv_layer_five, self.dropout_five)
+
+        print("conv_layer_five_dropped: " + str((conv_layer_five_dropped).get_shape()))
+
+        # Fully connected layer
+        conv_layer_five_dropped_array = tf.reshape(conv_layer_five_dropped, [-1, 23 * 40 * 16])
+        w_first_connected = weight_variable([23 * 40 * 16, 9 * 4])
+        bias_first_connected = bias_variable([9 * 4])
+
+        # Network output
+        self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
 
 
-def cnn_5_model(x_image, verbose=False):
+    def network_model_reg_small_xavier(self, rfx, rfy, channels, dropout_list):
+        """
+        This is a regression type network with the following structure:
 
-    # Dropout probabilities
-    dropout_one= 0.1
-    dropout_two= 0.1
-    dropout_three= 0.1
-    dropout_four= 0.1
-    dropout_five= 0.1
+        conv_layer_one_dropped:    (?, 180, 320,  8)
+        conv_layer_two_dropped:    (?,  90, 160, 16)
+        conv_layer_three_dropped:  (?,  90, 160, 16)
+        conv_layer_four_dropped:   (?,  45,  80, 16)
+        conv_layer_five_dropped:   (?,  23,  40, 16)
 
-    # 1st conv layer
-    kernel_one = tf.Variable(tf.random_normal([5, 5, 3, 128]))
-    bias_one = tf.Variable(tf.random_normal([128]))
-    conv_layer_one = tf.nn.relu(
-        tf.nn.conv2d(x_image, kernel_one, strides=[1, 2, 2, 1], padding='SAME') + bias_one)
-    conv_layer_one_drop = tf.nn.dropout(conv_layer_one, dropout_one)
+        This function is the same as:
+        - network_model_reg_small(self, rfx, rfy, channels, dropout_list)
 
-    # 2nd conv layer
-    kernel_two = tf.Variable(tf.random_normal([5, 5, 128, 256]))
-    bias_two = tf.Variable(tf.random_normal([256]))
-    conv_layer_two = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_one_drop, kernel_two, strides=[1, 2, 2, 1], padding='SAME') + bias_two)
-    conv_layer_two_drop = tf.nn.dropout(conv_layer_two, dropout_two)
+        but also performs a Xavier initialization of weights.
 
-    # 3rd conv layer
-    kernel_three = tf.Variable(tf.random_normal([5, 5, 256, 512]))
-    bias_three = tf.Variable(tf.random_normal([512]))
-    conv_layer_three = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_two_drop, kernel_three, strides=[1, 2, 2, 1], padding='SAME') + bias_three)
-    conv_layer_three_drop = tf.nn.dropout(conv_layer_three, dropout_three)
+        :param rfx: scaling factor in the x direction
+        :param rfy: scaling factor in the x direction
+        :param channels: number of channels in the input image
+        :param dropout_list: array of dropout probabilities for each layer
+        :return: none
+        """
 
-    # 4th conv layer
-    kernel_four = tf.Variable(tf.random_normal([5, 5, 512, 1024]))
-    bias_four = tf.Variable(tf.random_normal([1024]))
-    conv_layer_four = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_three_drop, kernel_four, strides=[1, 2, 2, 1], padding='SAME') + bias_four)
-    conv_layer_four_drop = tf.nn.dropout(conv_layer_four, dropout_four)
+        self.epsilon = gv.EPSILON_BN
 
-    # 5th conv layer
-    kernel_five = tf.Variable(tf.random_normal([5, 5, 1024, 2048]))
-    bias_five = tf.Variable(tf.random_normal([2048]))
-    conv_layer_five = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_four_drop, kernel_five, strides=[1, 2, 2, 1], padding='SAME') + bias_five)
-    #dropout_five = tf.placeholder(tf.float32)
-    conv_layer_five_drop = tf.nn.dropout(conv_layer_five, dropout_five)
+        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
+        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
 
-    # Fully connected layer
-    conv_layer_twelve_drop_array = tf.reshape(conv_layer_five_drop, [-1, 16 * 16 * 2048])
-    matrix_final = weight_variable([16 * 16 * 2048, 8])
-    bias_final = bias_variable([8])
+        self.rfx = rfx
+        self.rfy = rfy
+        self.width = iw
+        self.height = ih
+        self.channels = channels
+        self.dropout_list = dropout_list
+        self.dropout_one = tf.placeholder(tf.float32)
+        self.dropout_two = tf.placeholder(tf.float32)
+        self.dropout_three = tf.placeholder(tf.float32)
+        self.dropout_four = tf.placeholder(tf.float32)
+        self.dropout_five = tf.placeholder(tf.float32)
 
-    # Network output
-    y_conv = tf.matmul(conv_layer_twelve_drop_array, matrix_final) + bias_final
+        self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
+        self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
 
-    if verbose == True:
-        print("conv_layer_one size: " + str(conv_layer_one.get_shape()))
-        print("conv_layer_two size: " + str(conv_layer_two.get_shape()))
-        print("conv_layer_three size: " + str(conv_layer_three.get_shape()))
-        print("conv_layer_four size: " + str(conv_layer_four.get_shape()))
-        print("conv_layer_five size: " + str(conv_layer_five.get_shape()))
+        kernel_one = tf.get_variable("kernel_one",
+                                     shape=[5, 5, 3, 8],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_one = bias_variable([8])
 
-    return y_conv
+        conv_one = tf.nn.conv2d(self.network_input, kernel_one, strides=[1, 1, 1, 1], padding='SAME') + bias_one
+        mean_one, vari_one = tf.nn.moments(conv_one, [0])
+        scale_one = tf.Variable(tf.ones([8], dtype=tf.float32), dtype=tf.float32)
+        beta_one = tf.Variable(tf.zeros([8], dtype=tf.float32), dtype=tf.float32)
+        bn_one = tf.nn.batch_normalization(conv_one, mean_one, vari_one, beta_one, scale_one, self.epsilon)
 
-def cnn_3_model(x_image, verbose=False):
+        conv_layer_one = tf.nn.relu(bn_one)
+        conv_layer_one_dropped = tf.nn.dropout(conv_layer_one, self.dropout_one)
 
-    # Dropout probabilities
-    dropout_one= 0.1
-    dropout_two= 0.1
-    dropout_three= 0.1
+        print("conv_layer_one_dropped: " + str((conv_layer_one_dropped).get_shape()))
 
-    # 1st conv layer
-    kernel_one = tf.Variable(tf.random_normal([5, 5, 3, 128]))
-    bias_one = tf.Variable(tf.random_normal([128]))
-    conv_layer_one = tf.nn.relu(
-        tf.nn.conv2d(x_image, kernel_one, strides=[1, 4, 4, 1], padding='SAME') + bias_one)
-    conv_layer_one_drop = tf.nn.dropout(conv_layer_one, dropout_one)
 
-    # 2nd conv layer
-    kernel_two = tf.Variable(tf.random_normal([3, 3, 128, 256]))
-    bias_two = tf.Variable(tf.random_normal([256]))
-    conv_layer_two = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_one_drop, kernel_two, strides=[1, 2, 2, 1], padding='SAME') + bias_two)
-    conv_layer_two_drop = tf.nn.dropout(conv_layer_two, dropout_two)
+        kernel_two = tf.get_variable("kernel_two",
+                                     shape=[5, 5, 8, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_two = bias_variable([16])
 
-    # 3rd conv layer
-    kernel_three = tf.Variable(tf.random_normal([3, 3, 256, 512]))
-    bias_three = tf.Variable(tf.random_normal([512]))
-    conv_layer_three = tf.nn.relu(
-        tf.nn.conv2d(conv_layer_two_drop, kernel_three, strides=[1, 2, 2, 1], padding='SAME') + bias_three)
-    conv_layer_three_drop = tf.nn.dropout(conv_layer_three, dropout_three)
+        conv_two = tf.nn.conv2d(conv_layer_one_dropped, kernel_two, strides=[1, 2, 2, 1], padding='SAME') + bias_two
+        mean_two, vari_two = tf.nn.moments(conv_two, [0])
+        scale_two = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_two = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_two = tf.nn.batch_normalization(conv_two, mean_two, vari_two, beta_two, scale_two, self.epsilon)
 
-    # Fully connected layer
-    conv_layer_twelve_drop_array = tf.reshape(conv_layer_three_drop, [-1, 32 * 32 * 512])
-    matrix_final = weight_variable([32 * 32 * 512, 8])
-    bias_final = bias_variable([8])
+        conv_layer_two = tf.nn.relu(bn_two)
+        conv_layer_two_dropped = tf.nn.dropout(conv_layer_two, self.dropout_two)
 
-    # Network output
-    y_conv = tf.matmul(conv_layer_twelve_drop_array, matrix_final) + bias_final
+        print("conv_layer_two_dropped: " + str((conv_layer_two_dropped).get_shape()))
 
-    if verbose == True:
-        print("conv_layer_one size: " + str(conv_layer_one.get_shape()))
-        print("conv_layer_two size: " + str(conv_layer_two.get_shape()))
-        print("conv_layer_three size: " + str(conv_layer_three.get_shape()))
 
-    return y_conv
+        kernel_three = tf.get_variable("kernel_three",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_three = bias_variable([16])
+
+        conv_three = tf.nn.conv2d(conv_layer_two_dropped, kernel_three, strides=[1, 1, 1, 1], padding='SAME') + bias_three
+        mean_three, vari_three = tf.nn.moments(conv_three, [0])
+        scale_three = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_three = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_three = tf.nn.batch_normalization(conv_three, mean_three, vari_three, beta_three, scale_three, self.epsilon)
+
+        conv_layer_three = tf.nn.relu(bn_three)
+        conv_layer_three_dropped = tf.nn.dropout(conv_layer_three, self.dropout_three)
+
+        print("conv_layer_three_dropped: " + str((conv_layer_three_dropped).get_shape()))
+
+
+        kernel_four = tf.get_variable("kernel_four",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_four = bias_variable([16])
+
+        conv_four = tf.nn.conv2d(conv_layer_three_dropped, kernel_four, strides=[1, 2, 2, 1], padding='SAME') + bias_four
+        mean_four, vari_four = tf.nn.moments(conv_four, [0])
+        scale_four = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_four = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_four = tf.nn.batch_normalization(conv_four, mean_four, vari_four, beta_four, scale_four, self.epsilon)
+
+        conv_layer_four = tf.nn.relu(bn_four)
+        conv_layer_four_dropped = tf.nn.dropout(conv_layer_four, self.dropout_four)
+
+        print("conv_layer_four_dropped: " + str((conv_layer_four_dropped).get_shape()))
+
+        kernel_five = tf.get_variable("kernel_five",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_five = bias_variable([16])
+
+        conv_five = tf.nn.conv2d(conv_layer_four_dropped, kernel_five, strides=[1, 2, 2, 1], padding='SAME') + bias_five
+        mean_five, vari_five = tf.nn.moments(conv_five, [0])
+        scale_five = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_five = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_five = tf.nn.batch_normalization(conv_five, mean_five, vari_five, beta_five, scale_five, self.epsilon)
+
+        conv_layer_five = tf.nn.relu(bn_five)
+        conv_layer_five_dropped = tf.nn.dropout(conv_layer_five, self.dropout_five)
+
+        print("conv_layer_five_dropped: " + str((conv_layer_five_dropped).get_shape()))
+
+        # Fully connected layer
+        conv_layer_five_dropped_array = tf.reshape(conv_layer_five_dropped, [-1, 23 * 40 * 16])
+
+        w_first_connected = tf.get_variable("w_first_connected",
+                                     shape=[23 * 40 * 16, 9 * 4],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_first_connected = bias_variable([9 * 4])
+
+        # Network output
+        self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+
+        #self.network_output = tf.nn.sigmoid(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+        #self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+
+        #self.temp_const = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="temp_const")
+        #temp = tf.nn.relu(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+
+        #self.network_output = tf.select(tf.greater_equal(temp, self.temp_const), self.temp_const, temp)
+
+
+    def network_model_cla_small_xavier(self, rfx, rfy, channels, dropout_list):
+        """
+        This is a classification type network with the following structure:
+
+        conv_layer_one_dropped:    (?, 180, 320,  8)
+        conv_layer_two_dropped:    (?,  90, 160, 16)
+        conv_layer_three_dropped:  (?,  90, 160, 16)
+        conv_layer_four_dropped:   (?,  45,  80, 16)
+        conv_layer_five_dropped:   (?,  23,  40, 16)
+
+        This function constructs a neural network that:
+        - performs a Xavier initialization of weights.
+        - binarizes the result and uses a classification scheme instead of
+          regression which is more appropriate.
+
+        :param rfx: scaling factor in the x direction
+        :param rfy: scaling factor in the x direction
+        :param channels: number of channels in the input image
+        :param dropout_list: array of dropout probabilities for each layer
+        :return: none
+        """
+
+        self.epsilon = gv.EPSILON_BN
+
+        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
+        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
+
+        self.rfx = rfx
+        self.rfy = rfy
+        self.width = iw
+        self.height = ih
+        self.channels = channels
+        self.dropout_list = dropout_list
+        self.dropout_one = tf.placeholder(tf.float32)
+        self.dropout_two = tf.placeholder(tf.float32)
+        self.dropout_three = tf.placeholder(tf.float32)
+        self.dropout_four = tf.placeholder(tf.float32)
+        self.dropout_five = tf.placeholder(tf.float32)
+
+        self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
+        self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
+
+        kernel_one = tf.get_variable("kernel_one",
+                                     shape=[5, 5, 3, 8],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_one = bias_variable([8])
+
+        conv_one = tf.nn.conv2d(self.network_input, kernel_one, strides=[1, 1, 1, 1], padding='SAME') + bias_one
+        mean_one, vari_one = tf.nn.moments(conv_one, [0])
+        scale_one = tf.Variable(tf.ones([8], dtype=tf.float32), dtype=tf.float32)
+        beta_one = tf.Variable(tf.zeros([8], dtype=tf.float32), dtype=tf.float32)
+        bn_one = tf.nn.batch_normalization(conv_one, mean_one, vari_one, beta_one, scale_one, self.epsilon)
+
+        conv_layer_one = tf.nn.relu(bn_one)
+        conv_layer_one_dropped = tf.nn.dropout(conv_layer_one, self.dropout_one)
+
+        print("conv_layer_one_dropped: " + str((conv_layer_one_dropped).get_shape()))
+
+
+        kernel_two = tf.get_variable("kernel_two",
+                                     shape=[5, 5, 8, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_two = bias_variable([16])
+
+        conv_two = tf.nn.conv2d(conv_layer_one_dropped, kernel_two, strides=[1, 2, 2, 1], padding='SAME') + bias_two
+        mean_two, vari_two = tf.nn.moments(conv_two, [0])
+        scale_two = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_two = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_two = tf.nn.batch_normalization(conv_two, mean_two, vari_two, beta_two, scale_two, self.epsilon)
+
+        conv_layer_two = tf.nn.relu(bn_two)
+        conv_layer_two_dropped = tf.nn.dropout(conv_layer_two, self.dropout_two)
+
+        print("conv_layer_two_dropped: " + str((conv_layer_two_dropped).get_shape()))
+
+
+        kernel_three = tf.get_variable("kernel_three",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_three = bias_variable([16])
+
+        conv_three = tf.nn.conv2d(conv_layer_two_dropped, kernel_three, strides=[1, 1, 1, 1], padding='SAME') + bias_three
+        mean_three, vari_three = tf.nn.moments(conv_three, [0])
+        scale_three = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_three = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_three = tf.nn.batch_normalization(conv_three, mean_three, vari_three, beta_three, scale_three, self.epsilon)
+
+        conv_layer_three = tf.nn.relu(bn_three)
+        conv_layer_three_dropped = tf.nn.dropout(conv_layer_three, self.dropout_three)
+
+        print("conv_layer_three_dropped: " + str((conv_layer_three_dropped).get_shape()))
+
+
+        kernel_four = tf.get_variable("kernel_four",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_four = bias_variable([16])
+
+        conv_four = tf.nn.conv2d(conv_layer_three_dropped, kernel_four, strides=[1, 2, 2, 1], padding='SAME') + bias_four
+        mean_four, vari_four = tf.nn.moments(conv_four, [0])
+        scale_four = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_four = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_four = tf.nn.batch_normalization(conv_four, mean_four, vari_four, beta_four, scale_four, self.epsilon)
+
+        conv_layer_four = tf.nn.relu(bn_four)
+        conv_layer_four_dropped = tf.nn.dropout(conv_layer_four, self.dropout_four)
+
+        print("conv_layer_four_dropped: " + str((conv_layer_four_dropped).get_shape()))
+
+        kernel_five = tf.get_variable("kernel_five",
+                                     shape=[5, 5, 16, 16],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_five = bias_variable([16])
+
+        conv_five = tf.nn.conv2d(conv_layer_four_dropped, kernel_five, strides=[1, 2, 2, 1], padding='SAME') + bias_five
+        mean_five, vari_five = tf.nn.moments(conv_five, [0])
+        scale_five = tf.Variable(tf.ones([16], dtype=tf.float32), dtype=tf.float32)
+        beta_five = tf.Variable(tf.zeros([16], dtype=tf.float32), dtype=tf.float32)
+        bn_five = tf.nn.batch_normalization(conv_five, mean_five, vari_five, beta_five, scale_five, self.epsilon)
+
+        conv_layer_five = tf.nn.relu(bn_five)
+        conv_layer_five_dropped = tf.nn.dropout(conv_layer_five, self.dropout_five)
+
+        print("conv_layer_five_dropped: " + str((conv_layer_five_dropped).get_shape()))
+
+        # Fully connected layer
+        conv_layer_five_dropped_array = tf.reshape(conv_layer_five_dropped, [-1, 23 * 40 * 16])
+
+        w_first_connected = tf.get_variable("w_first_connected",
+                                     shape=[23 * 40 * 16, 9 * 4],
+                                     initializer=tf.contrib.layers.xavier_initializer())
+        bias_first_connected = bias_variable([9 * 4])
+
+        # Network output
+        #self.network_output = tf.nn.sigmoid(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+        self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+
+        self.temp_const = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="temp_const")
+        temp = tf.nn.relu(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+
+        self.network_output = tf.select(tf.greater_equal(temp, self.temp_const), self.temp_const, temp)
+
+
+
+
+
+    def __init__(self, network_type, rfx, rfy, channels, dropout_list):
+
+        if network_type == "network_model_reg_small":
+            self.network_type = network_type
+            self.network_model_reg_small(rfx, rfy, channels, dropout_list)
+        elif network_type == "network_model_reg_small_xavier":
+            self.network_type = network_type
+            self.network_model_reg_small_xavier(rfx, rfy, channels, dropout_list)
+        else:
+            pass
+
+
+    def setup_loss(self, mini_batch_size):
+
+        if (self.network_type == "network_model_reg_small" or
+            self.network_type == "network_model_reg_small_xavier"):
+            self.network_expected_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_expected_output")
+
+            s = tf.subtract(self.network_output, self.network_expected_output)
+            self.C = tf.reduce_sum(tf.multiply(s, s))
+            m = tf.constant(2.0 * mini_batch_size, dtype=tf.float32)
+            self.C = tf.divide(self.C, m)
+        else:
+            pass
+
+
+    def setup_minimize(self, learning_rate):
+
+        #self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.C)
+        self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.C)
+
+
+    def train(self,
+              x_train,
+              x_valid,
+              n_epochs,
+              mini_batch_size,
+              learning_rate,
+              network_model_file_name="network_model.tf"):
+
+        self.setup_loss(mini_batch_size)
+        self.setup_minimize(learning_rate)
+
+        init = tf.global_variables_initializer()
+        sess = tf.Session()
+        sess.run(init)
+
+        n_batches_per_epoch = int(len(x_train) / mini_batch_size)
+
+        saver = tf.train.Saver()
+
+        print("Training...")
+        print("Number of mini batches: " + str(n_batches_per_epoch))
+        for epoch in range(n_epochs):
+            ptr = 0
+            for batch in range(n_batches_per_epoch):
+                start = time.time()
+
+                mini_batch = x_train[ptr:ptr + mini_batch_size]
+                images, labels = gv.read_image_chunk_real_labels(mini_batch, self.rfx, self.rfy)
+
+                #print("image shape: " + str(images[0].shape))
+
+                ptr = ptr + mini_batch_size
+
+                parameter_dict = {self.network_input: images,
+                                  self.network_expected_output: labels,
+                                  self.dropout_one: self.dropout_list[0],
+                                  self.dropout_two: self.dropout_list[1],
+                                  self.dropout_three: self.dropout_list[2],
+                                  self.dropout_four: self.dropout_list[3],
+                                  self.dropout_five: self.dropout_list[4]}
+                (self.train_step).run(session=sess, feed_dict=parameter_dict)
+
+                c_val_train = (self.C).eval(session=sess, feed_dict=parameter_dict)
+                stop = time.time()
+
+                print("c_val_train value: %10s time: %10s" % (str(c_val_train), str(stop - start)))
+                #print("time: %10s" % (str(stop - start)))
+
+                saver.save(sess, network_model_file_name)
+
+            images, labels = gv.read_image_chunk_real_labels(x_valid, self.rfx, self.rfy)
+            parameter_dict = {self.network_input: images,
+                              self.network_expected_output: labels,
+                              self.dropout_one: self.dropout_list[0],
+                              self.dropout_two: self.dropout_list[1],
+                              self.dropout_three: self.dropout_list[2],
+                              self.dropout_four: self.dropout_list[3],
+                              self.dropout_five: self.dropout_list[4]}
+            c_val_valid = (self.C).eval(session=sess, feed_dict=parameter_dict)
+            print("c_val_valid value: " + str(c_val_valid))
+
+
+
+
+
+
+# Some spare code
+
+#self.network_output = tf.nn.sigmoid(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+#self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+
+#self.temp_const = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="temp_const")
+#temp = tf.nn.relu(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
+
+#self.network_output = tf.select(tf.greater_equal(temp, self.temp_const), self.temp_const, temp)
+
