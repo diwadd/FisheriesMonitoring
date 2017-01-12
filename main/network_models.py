@@ -1,4 +1,5 @@
 import time
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -430,6 +431,15 @@ class NeuralNetworkFishDetection:
 
     def __init__(self, network_type, rfx, rfy, channels, dropout_list):
 
+        self.sess = None
+        self.saver_loader = None
+
+        self.increment_constant = tf.constant(1, dtype=tf.float32, name="increment_constant")
+        self.epoch_step_number = tf.Variable(0, dtype=tf.float32, name="epoch_step_number")
+
+        self.epoch_step_number = tf.assign(self.epoch_step_number,
+                                           tf.add(self.epoch_step_number, self.increment_constant))
+
         if network_type == "network_model_reg_small":
             self.network_type = network_type
             self.network_model_reg_small(rfx, rfy, channels, dropout_list)
@@ -460,26 +470,42 @@ class NeuralNetworkFishDetection:
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.C)
 
 
+
+    def setup_session(self, mode, network_model_file_name):
+
+        if mode == "training":
+            self.saver_loader = tf.train.Saver()
+
+            init = tf.global_variables_initializer()
+            self.sess = tf.Session()
+            self.sess.run(init)
+        elif mode == "training_continuation":
+            self.saver_loader = tf.train.Saver()
+            self.sess = tf.Session()
+
+            self.saver_loader.restore(self.sess, network_model_file_name)
+        else:
+            sys.exit("ERROR: Choose a correct mode.")
+
     def train(self,
               x_train,
               x_valid,
               n_epochs,
               mini_batch_size,
               learning_rate,
-              network_model_file_name="network_model.tf"):
+              mode,
+              network_model_file_name):
 
         self.setup_loss(mini_batch_size)
         self.setup_minimize(learning_rate)
 
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
+        self.setup_session(mode, network_model_file_name)
+
 
         n_batches_per_epoch = int(len(x_train) / mini_batch_size)
 
-        saver = tf.train.Saver()
-
         print("Training...")
+        print("epoch_step_number: " + str(self.sess.run(self.epoch_step_number)))
         print("Number of mini batches: " + str(n_batches_per_epoch))
         for epoch in range(n_epochs):
             ptr = 0
@@ -500,15 +526,18 @@ class NeuralNetworkFishDetection:
                                   self.dropout_three: self.dropout_list[2],
                                   self.dropout_four: self.dropout_list[3],
                                   self.dropout_five: self.dropout_list[4]}
-                (self.train_step).run(session=sess, feed_dict=parameter_dict)
+                (self.train_step).run(session=self.sess, feed_dict=parameter_dict)
 
-                c_val_train = (self.C).eval(session=sess, feed_dict=parameter_dict)
+                c_val_train = (self.C).eval(session=self.sess, feed_dict=parameter_dict)
                 stop = time.time()
 
                 print("c_val_train value: %10s time: %10s" % (str(c_val_train), str(stop - start)))
                 #print("time: %10s" % (str(stop - start)))
 
-                saver.save(sess, network_model_file_name)
+                #self.sess.run(self.epoch_step_number)
+                self.saver_loader.save(self.sess, network_model_file_name)
+
+                print("epoch_step_number: " + str(self.epoch_step_number.eval(session=self.sess)))
 
             images, labels = gv.read_image_chunk_real_labels(x_valid, self.rfx, self.rfy)
             parameter_dict = {self.network_input: images,
@@ -518,7 +547,7 @@ class NeuralNetworkFishDetection:
                               self.dropout_three: self.dropout_list[2],
                               self.dropout_four: self.dropout_list[3],
                               self.dropout_five: self.dropout_list[4]}
-            c_val_valid = (self.C).eval(session=sess, feed_dict=parameter_dict)
+            c_val_valid = (self.C).eval(session=self.sess, feed_dict=parameter_dict)
             print("c_val_valid value: " + str(c_val_valid))
 
 

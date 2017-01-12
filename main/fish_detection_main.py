@@ -88,8 +88,10 @@ print(labels[0].shape)
 network = nm.NeuralNetworkFishDetection("network_model_reg_small", rfx, rfy, 3, [0.7, 0.7, 0.7, 0.7, 0.7])
 #network = nm.NeuralNetworkFishDetection("network_model_reg_small_xavier", rfx, rfy, 3, [0.7, 0.7, 0.7, 0.7, 0.7])
 
+
+
 n_epochs = 10
-mini_batch_size = 200
+mini_batch_size = 50
 learning_rate = 1.0
 
 network.train(x_train,
@@ -97,4 +99,6 @@ network.train(x_train,
               n_epochs,
               mini_batch_size,
               learning_rate,
-              "network_model_network_model_reg_small.tf")
+              mode="training",
+              #mode="training_continuation",
+              network_model_file_name=gv.MAIN_FOLDER_DIR + "xft_network_model_network_model_reg_small.tf")
