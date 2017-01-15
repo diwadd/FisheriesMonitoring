@@ -21,7 +21,7 @@ def bias_variable(shape):
 
 class NeuralNetworkFishDetection:
 
-    def network_model_reg_small(self, rfx, rfy, channels, dropout_list):
+    def network_model_reg_small(self):
         """
         This is a regression type network with the following structure:
 
@@ -38,23 +38,6 @@ class NeuralNetworkFishDetection:
         :param dropout_list: array of dropout probabilities for each layer
         :return: none
         """
-
-        self.epsilon = gv.EPSILON_BN
-
-        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
-        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
-
-        self.rfx = rfx
-        self.rfy = rfy
-        self.width = iw
-        self.height = ih
-        self.channels = channels
-        self.dropout_list = dropout_list
-        self.dropout_one = tf.placeholder(tf.float32)
-        self.dropout_two = tf.placeholder(tf.float32)
-        self.dropout_three = tf.placeholder(tf.float32)
-        self.dropout_four = tf.placeholder(tf.float32)
-        self.dropout_five = tf.placeholder(tf.float32)
 
         self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
         self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
@@ -136,9 +119,10 @@ class NeuralNetworkFishDetection:
 
         # Network output
         self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+        self.network_expected_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_expected_output")
 
 
-    def network_model_reg_small_xavier(self, rfx, rfy, channels, dropout_list):
+    def network_model_reg_small_xavier(self):
         """
         This is a regression type network with the following structure:
 
@@ -160,23 +144,6 @@ class NeuralNetworkFishDetection:
         :return: none
         """
 
-        self.epsilon = gv.EPSILON_BN
-
-        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
-        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
-
-        self.rfx = rfx
-        self.rfy = rfy
-        self.width = iw
-        self.height = ih
-        self.channels = channels
-        self.dropout_list = dropout_list
-        self.dropout_one = tf.placeholder(tf.float32)
-        self.dropout_two = tf.placeholder(tf.float32)
-        self.dropout_three = tf.placeholder(tf.float32)
-        self.dropout_four = tf.placeholder(tf.float32)
-        self.dropout_five = tf.placeholder(tf.float32)
-
         self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
         self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
 
@@ -273,17 +240,10 @@ class NeuralNetworkFishDetection:
 
         # Network output
         self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
-
-        #self.network_output = tf.nn.sigmoid(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
-        #self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
-
-        #self.temp_const = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="temp_const")
-        #temp = tf.nn.relu(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
-
-        #self.network_output = tf.select(tf.greater_equal(temp, self.temp_const), self.temp_const, temp)
+        self.network_expected_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_expected_output")
 
 
-    def network_model_cla_small_xavier(self, rfx, rfy, channels, dropout_list):
+    def network_model_cla_small_xavier(self):
         """
         This is a classification type network with the following structure:
 
@@ -305,25 +265,10 @@ class NeuralNetworkFishDetection:
         :return: none
         """
 
-        self.epsilon = gv.EPSILON_BN
-
-        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
-        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
-
-        self.rfx = rfx
-        self.rfy = rfy
-        self.width = iw
-        self.height = ih
-        self.channels = channels
-        self.dropout_list = dropout_list
-        self.dropout_one = tf.placeholder(tf.float32)
-        self.dropout_two = tf.placeholder(tf.float32)
-        self.dropout_three = tf.placeholder(tf.float32)
-        self.dropout_four = tf.placeholder(tf.float32)
-        self.dropout_five = tf.placeholder(tf.float32)
-
         self.network_input = tf.placeholder(tf.float32, shape=[None, self.height, self.width, self.channels], name="network_input")
-        self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_output")
+
+        # We have self.n_bins + 1 to mark slots that don't have rectangles.
+        self.network_output = tf.placeholder(tf.float32, shape=[None, 9 * 4 * (self.n_bins + 1)], name="network_output")
 
         kernel_one = tf.get_variable("kernel_one",
                                      shape=[5, 5, 3, 8],
@@ -411,67 +356,135 @@ class NeuralNetworkFishDetection:
         # Fully connected layer
         conv_layer_five_dropped_array = tf.reshape(conv_layer_five_dropped, [-1, 23 * 40 * 16])
 
+        # We have self.n_bins + 1 to mark slots that don't have rectangles.
         w_first_connected = tf.get_variable("w_first_connected",
-                                     shape=[23 * 40 * 16, 9 * 4],
+                                     shape=[23 * 40 * 16, 9 * 4 * (self.n_bins + 1)],
                                      initializer=tf.contrib.layers.xavier_initializer())
-        bias_first_connected = bias_variable([9 * 4])
+        bias_first_connected = bias_variable([9 * 4 * (self.n_bins + 1)])
 
         # Network output
-        #self.network_output = tf.nn.sigmoid(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
         self.network_output = tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected
+        self.network_expected_output = tf.placeholder(tf.float32, shape=[None, 9 * 4 * (self.n_bins + 1)], name="network_expected_output")
 
-        self.temp_const = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="temp_const")
-        temp = tf.nn.relu(tf.matmul(conv_layer_five_dropped_array, w_first_connected) + bias_first_connected)
-
-        self.network_output = tf.select(tf.greater_equal(temp, self.temp_const), self.temp_const, temp)
+        self.network_output_for_prediction = tf.nn.softmax(self.network_output)
 
 
 
 
+    def __init__(self, network_type, rfx, rfy, channels, dropout_list, n_bins=256):
 
-    def __init__(self, network_type, rfx, rfy, channels, dropout_list):
+        iw = int(rfx * gv.DEFAULT_IMAGE_WIDTH)
+        ih = int(rfy * gv.DEFAULT_IMAGE_HEIGHT)
+
+        self.width = iw
+        self.height = ih
+        self.rfx = rfx
+        self.rfy = rfy
+
+        self.epsilon = gv.EPSILON_BN
+        self.channels = channels
+
+        self.n_bins = n_bins
+
+        self.binning_array_width = None
+        self.binning_array_height = None
 
         self.sess = None
         self.saver_loader = None
 
         self.increment_constant = tf.constant(1, dtype=tf.float32, name="increment_constant")
-        self.epoch_step_number = tf.Variable(0, dtype=tf.float32, name="epoch_step_number")
+        self.control_step_number = tf.Variable(0, dtype=tf.float32, name="epoch_step_number")
 
-        self.epoch_step_number = tf.assign(self.epoch_step_number,
-                                           tf.add(self.epoch_step_number, self.increment_constant))
+        self.control_step_number = tf.assign(self.control_step_number,
+                                           tf.add(self.control_step_number, self.increment_constant))
+
+        self.dropout_list = dropout_list
+        self.dropout_one = tf.placeholder(tf.float32)
+        self.dropout_two = tf.placeholder(tf.float32)
+        self.dropout_three = tf.placeholder(tf.float32)
+        self.dropout_four = tf.placeholder(tf.float32)
+        self.dropout_five = tf.placeholder(tf.float32)
+        self.dropout_six = tf.placeholder(tf.float32)
+        self.dropout_seven = tf.placeholder(tf.float32)
+        self.dropout_eight = tf.placeholder(tf.float32)
+
+        NUMBER_OF_DROPOUT_PLACEHOLDERS = 8
+        if len(self.dropout_list) < NUMBER_OF_DROPOUT_PLACEHOLDERS:
+            n_missing_dropout_list_elements = NUMBER_OF_DROPOUT_PLACEHOLDERS - len(self.dropout_list)
+            dropout_list_addition = [1.0 for i in range(n_missing_dropout_list_elements)]
+            self.dropout_list = self.dropout_list + dropout_list_addition
+
+        self.regression_network = False
+        self.classification_network = False
 
         if network_type == "network_model_reg_small":
             self.network_type = network_type
-            self.network_model_reg_small(rfx, rfy, channels, dropout_list)
+            self.network_model_reg_small()
+            self.regression_network = True
         elif network_type == "network_model_reg_small_xavier":
             self.network_type = network_type
-            self.network_model_reg_small_xavier(rfx, rfy, channels, dropout_list)
+            self.network_model_reg_small_xavier()
+            self.regression_network = True
+        elif network_type == "network_model_cla_small_xavier":
+            self.network_type = network_type
+            self.network_model_cla_small_xavier()
+
+            self.binning_array_width = [i * self.width / self.n_bins for i in range(self.n_bins)]
+            self.binning_array_height = [i * self.height / self.n_bins for i in range(self.n_bins)]
+
+            self.classification_network = True
         else:
             pass
 
 
+        self.parameter_dict = {self.network_input: None,
+                               self.network_expected_output: None,
+                               self.dropout_one: self.dropout_list[0],
+                               self.dropout_two: self.dropout_list[1],
+                               self.dropout_three: self.dropout_list[2],
+                               self.dropout_four: self.dropout_list[3],
+                               self.dropout_five: self.dropout_list[4],
+                               self.dropout_six: self.dropout_list[5],
+                               self.dropout_seven: self.dropout_list[6],
+                               self.dropout_eight: self.dropout_list[7]}
+
+
     def setup_loss(self, mini_batch_size):
 
-        if (self.network_type == "network_model_reg_small" or
-            self.network_type == "network_model_reg_small_xavier"):
-            self.network_expected_output = tf.placeholder(tf.float32, shape=[None, 9 * 4], name="network_expected_output")
+        if self.regression_network == True:
+            # Set you the chi2 like loss
 
             s = tf.subtract(self.network_output, self.network_expected_output)
             self.C = tf.reduce_sum(tf.multiply(s, s))
             m = tf.constant(2.0 * mini_batch_size, dtype=tf.float32)
             self.C = tf.divide(self.C, m)
+        elif self.classification_network == True:
+            self.C = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.network_output, self.network_expected_output))
         else:
             pass
 
 
-    def setup_minimize(self, learning_rate):
+    def setup_minimize(self, initial_learning_rate, decay_steps, decay_rate):
 
-        #self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.C)
-        self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.C)
+        self.global_step = tf.Variable(0, trainable=False)
+        self.decaying_learning_rate = tf.train.exponential_decay(initial_learning_rate,
+                                                            self.global_step,
+                                                            decay_steps,
+                                                            decay_rate,
+                                                            staircase=True)
 
+        self.train_step = tf.train.AdamOptimizer(self.decaying_learning_rate).minimize(self.C, global_step=self.global_step)
 
 
     def setup_session(self, mode, network_model_file_name):
+        """
+        Chose whether you want to train from the begining or whether you what to
+        continue with an already pre trained network.
+
+        :param mode:
+        :param network_model_file_name:
+        :return:
+        """
 
         if mode == "training":
             self.saver_loader = tf.train.Saver()
@@ -479,7 +492,7 @@ class NeuralNetworkFishDetection:
             init = tf.global_variables_initializer()
             self.sess = tf.Session()
             self.sess.run(init)
-        elif mode == "training_continuation":
+        elif mode == "training_continuation_or_prediction":
             self.saver_loader = tf.train.Saver()
             self.sess = tf.Session()
 
@@ -487,68 +500,206 @@ class NeuralNetworkFishDetection:
         else:
             sys.exit("ERROR: Choose a correct mode.")
 
+
+
+    def uoi_and_loss_for_image_set(self, x_valid):
+        """
+        Calculate the chi2 loss and the uoi for and image set. Normally,
+        the image set is large and will not fit into memory. This function splits
+        the initial set of images into smaller sets and computes the chi2 loss and
+        the uoi for these smaller sets. It then combines the results.
+        For uoi it actually calculates the average.
+
+        :param x_valid:
+        :return:
+        """
+        N = len(x_valid)
+
+        mini_batch_size = gv.MINI_BATCHES_FOR_LARGE_SET_PROCESSING
+        n_batches = round(N / mini_batch_size)
+
+        ptr = 0
+
+        uoi_sum = 0.0
+        uoi_images = 0.0
+        total_loss = 0.0
+        for n in range(n_batches):
+            mini_batch = x_valid[ptr:ptr + mini_batch_size]
+            ptr = ptr + mini_batch_size
+
+            images = None
+            labels = None
+            if self.regression_network == True:
+                images, labels = gv.read_image_chunk_real_labels(mini_batch, self.rfx, self.rfy)
+            elif self.classification_network == True:
+                images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.rfx, self.rfy, self.n_bins)
+            else:
+                pass
+
+            self.parameter_dict[self.network_input] = images
+            self.parameter_dict[self.network_expected_output] = labels
+            predicted_rects = (self.network_output).eval(session=self.sess, feed_dict=self.parameter_dict)
+
+
+            uoi_sum_batch = None
+            uoi_images_batch = None
+            if self.regression_network == True:
+                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels(labels, predicted_rects)
+
+            elif self.classification_network == True:
+                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels_cla_version(labels,
+                                                                                       predicted_rects,
+                                                                                       self.binning_array_width,
+                                                                                       self.binning_array_height,
+                                                                                       n_rects_per_img)
+            else:
+                pass
+
+            uoi_sum = uoi_sum + uoi_sum_batch
+            uoi_images = uoi_images + uoi_images_batch
+
+            loss = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
+            total_loss = total_loss + mini_batch_size*loss
+
+        average_uoi = uoi_sum/uoi_images
+        return average_uoi, total_loss/len(x_valid)
+
+
+
     def train(self,
               x_train,
               x_valid,
               n_epochs,
               mini_batch_size,
-              learning_rate,
+              initial_learning_rate,
               mode,
-              network_model_file_name):
+              network_model_file_name,
+              decay_steps,
+              decay_rate):
+        """
+        Train the selected network model.
+
+        :param x_train:
+        :param x_valid:
+        :param n_epochs:
+        :param mini_batch_size:
+        :param initial_learning_rate:
+        :param mode:
+        :param network_model_file_name:
+        :return:
+        """
 
         self.setup_loss(mini_batch_size)
-        self.setup_minimize(learning_rate)
+        self.setup_minimize(initial_learning_rate, decay_steps, decay_rate)
 
         self.setup_session(mode, network_model_file_name)
 
 
-        n_batches_per_epoch = int(len(x_train) / mini_batch_size)
+        n_batches_per_epoch = round(len(x_train) / mini_batch_size)
 
         print("Training...")
-        print("epoch_step_number: " + str(self.sess.run(self.epoch_step_number)))
+        print("epoch_step_number: " + str(self.sess.run(self.control_step_number)))
         print("Number of mini batches: " + str(n_batches_per_epoch))
+        print("decaying_learning_rate: " + str(self.decaying_learning_rate.eval(session=self.sess)))
         for epoch in range(n_epochs):
             ptr = 0
+            start = time.time()
             for batch in range(n_batches_per_epoch):
-                start = time.time()
-
                 mini_batch = x_train[ptr:ptr + mini_batch_size]
-                images, labels = gv.read_image_chunk_real_labels(mini_batch, self.rfx, self.rfy)
-
-                #print("image shape: " + str(images[0].shape))
-
                 ptr = ptr + mini_batch_size
 
-                parameter_dict = {self.network_input: images,
-                                  self.network_expected_output: labels,
-                                  self.dropout_one: self.dropout_list[0],
-                                  self.dropout_two: self.dropout_list[1],
-                                  self.dropout_three: self.dropout_list[2],
-                                  self.dropout_four: self.dropout_list[3],
-                                  self.dropout_five: self.dropout_list[4]}
-                (self.train_step).run(session=self.sess, feed_dict=parameter_dict)
+                images = None
+                labels = None
+                if self.regression_network == True:
+                    images, labels = gv.read_image_chunk_real_labels(mini_batch, self.rfx, self.rfy)
+                elif self.classification_network == True:
+                    images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.rfx, self.rfy, self.n_bins)
+                else:
+                    pass
 
-                c_val_train = (self.C).eval(session=self.sess, feed_dict=parameter_dict)
-                stop = time.time()
+                self.parameter_dict[self.network_input] = images
+                self.parameter_dict[self.network_expected_output] = labels
+                #no = self.network_output.eval(session=self.sess, feed_dict=self.parameter_dict)
 
-                print("c_val_train value: %10s time: %10s" % (str(c_val_train), str(stop - start)))
-                #print("time: %10s" % (str(stop - start)))
+                #print(no)
 
-                #self.sess.run(self.epoch_step_number)
-                self.saver_loader.save(self.sess, network_model_file_name)
 
-                print("epoch_step_number: " + str(self.epoch_step_number.eval(session=self.sess)))
+                (self.train_step).run(session=self.sess, feed_dict=self.parameter_dict)
 
-            images, labels = gv.read_image_chunk_real_labels(x_valid, self.rfx, self.rfy)
-            parameter_dict = {self.network_input: images,
-                              self.network_expected_output: labels,
-                              self.dropout_one: self.dropout_list[0],
-                              self.dropout_two: self.dropout_list[1],
-                              self.dropout_three: self.dropout_list[2],
-                              self.dropout_four: self.dropout_list[3],
-                              self.dropout_five: self.dropout_list[4]}
-            c_val_valid = (self.C).eval(session=self.sess, feed_dict=parameter_dict)
-            print("c_val_valid value: " + str(c_val_valid))
+                if (batch % 5 == 0):
+                    c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
+                    print("(in batch loop) c_val_train value: %10s" % (str(c_val_train)))
+
+            stop = time.time()
+            print("Epoch time: " + str(stop - start))
+
+            self.saver_loader.save(self.sess, network_model_file_name)
+
+            print("control_step_number: " + str(self.control_step_number.eval(session=self.sess)))
+            print("Evaluating the validation set.")
+
+            print("decaying_learning_rate: " + str(self.decaying_learning_rate.eval(session=self.sess)))
+            print("global_step: " + str(self.global_step.eval(session=self.sess)))
+
+            average_uoi, total_loss = self.uoi_and_loss_for_image_set(x_valid)
+
+            print("Average uoi: %15s" % (str(average_uoi)))
+            print("Total loss: %15s" % (str(total_loss)))
+
+            #print("c_val_valid value: " + str(c_val_valid))
+
+
+
+    def predict(self, x_test, network_model_file_name):
+        """
+        Use the trained network to make predictinos.
+
+        :param x_test:
+        :param network_model_file_name:
+        :return:
+        """
+
+        self.setup_session("training_continuation_or_prediction", network_model_file_name)
+
+        N = len(x_test)
+
+        predicted_labels = [np.zeros((9, 4)) for i in range(N)]
+        #predicted_labels = np.zeros((N, 9, 4))
+        pl_index = 0
+
+        mini_batch_size = gv.MINI_BATCHES_FOR_LARGE_SET_PROCESSING
+        n_batches = round(N / mini_batch_size)
+
+        ptr = 0
+        for n in range(n_batches):
+            mini_batch = x_test[ptr:ptr + mini_batch_size]
+            images, labels = gv.read_image_chunk_real_labels(mini_batch, self.rfx, self.rfy)
+
+            ptr = ptr + mini_batch_size
+
+            #print("Processed %15s mini_batches o validation set out of %15s" % (str(n), str(n_batches)), end="\r")
+
+            self.parameter_dict[self.network_input] = images
+            self.parameter_dict[self.network_expected_output] = labels
+
+            predicted_labels_mini_batch = None
+            if self.regression_network == True:
+                predicted_labels_mini_batch = (self.network_output).eval(session=self.sess,
+                                                                         feed_dict=self.parameter_dict)
+            elif self.classification_network == True:
+                predicted_labels_mini_batch = (self.network_output_for_prediction).eval(session=self.sess,
+                                                                         feed_dict=self.parameter_dict)
+            else:
+                pass
+
+
+
+            for j in range(len(predicted_labels_mini_batch)):
+                predicted_labels[pl_index] = predicted_labels_mini_batch[j].reshape((9,4))
+                pl_index = pl_index + 1
+
+
+        return predicted_labels
 
 
 
