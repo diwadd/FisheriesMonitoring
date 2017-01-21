@@ -17,7 +17,7 @@ TRAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/t
 
 MAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/main/"
 
-MINI_BATCHES_FOR_LARGE_SET_PROCESSING = 250
+MINI_BATCHES_FOR_LARGE_SET_PROCESSING = 600
 
 UINT32_MAX = 4294967295
 
@@ -257,21 +257,15 @@ def read_image_chunk(image_chunk_list, rfx, rfy):
 
 
 
-def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
-    #ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
-    #iw = int(rfx*DEFAULT_IMAGE_WIDTH)
+def read_image_chunk_real_labels(image_chunk_list):
 
     N = len(image_chunk_list)
 
     images = [np.zeros((DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH)) for i in range(N)]
     labels = [-1.0*np.ones((9, 4)) for i in range(N)]
 
-    #print("labels size: " + str(len(labels)))
-
     for i in range(N):
-        #print("i: " + str(i))
         img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
-        #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
 
         images[i] = img/255.0
         ih, iw, _ = images[i].shape
@@ -283,25 +277,12 @@ def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
             w = rects[j][2]
             h = rects[j][3]
 
-            #nx, ny, nw, nh = rectangle_transform(x, y, w, h, 0.0, 0.0, rfx, rfy)
-
-            #print("i: " + str(i) + " j: " + str(j))
-            #print("labels[i].shape: " + str(labels[i].shape))
             labels[i][j, 0] = x / iw
             labels[i][j, 1] = y / ih
             labels[i][j, 2] = w / iw
             labels[i][j, 3] = h / ih
 
-            #mask_fish[int(ny):int(ny+nh), int(nx):int(nx+nw)] = 1.0
-
-        #labels[i] = mask_fish
     labels = [labels[i].reshape((9 * 4, )) for i in range(N)]
-
-
-    #for i in range(N):
-    #    print(image_chunk_list[i].file_name)
-    #    print(labels[i])
-
 
     return images, labels
 

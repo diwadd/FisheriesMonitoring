@@ -83,36 +83,105 @@ print("x_test size: %s" % (str(len(x_test))))
 #print(image_chunk_list[0])
 #print(labels[0].reshape(9,4,17))
 
-#network_type = "network_model_reg_small"
-#network_type = "network_model_reg_small_xavier"
-network_type = "network_model_cla_micro_xavier"
-#network_type = "network_model_cla_small_xavier"
-#network_type = "network_model_cla_small_xavier_ver2"
 
 channels = 3
-dropout_list = [0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+dropout_list = [1.0 for i in range(6)]
 n_bins = 128
 width = 320
 height = 180
-print("network_type: " + str(network_type))
 print("channels:" + str(channels))
 print("dropout_list: " + str(dropout_list))
 print("n_bins: " + str(n_bins))
 
+
+network_type = "regression"
+#network_type = "classification"
+print("network_type: " + str(network_type))
+
+
+shape_list = None
+index_conv_layers = None
+index_fully_conected_layers = None
+
+# Regression shape list
+if network_type == "regression":
+    """
+    shape_list = [[180, 320, 3],
+                  [[5, 5, 3, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [23 * 40 * 8, 1024],
+                  [1024, 9 * 4]]
+    """
+
+
+    """
+    shape_list = [[180, 320, 3],
+                  [[9, 9, 3, 4],[1, 2, 2, 1]],
+                  [[7, 7, 4, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 16],[1, 2, 2, 1]],
+                  [[3, 3, 16, 32],[1, 2, 2, 1]],
+                  [[3, 3, 32, 64],[1, 2, 2, 1]],
+                  [6 * 10 * 64, 1024],
+                  [1024, 9 * 4]]
+                  """
+
+    shape_list = [[180, 320, 3],
+                  [[9, 9, 3, 4],[1, 2, 2, 1]],
+                  [[7, 7, 4, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 16],[1, 2, 2, 1]],
+                  [[3, 3, 16, 32],[1, 2, 2, 1]],
+                  [[3, 3, 32, 64],[1, 2, 2, 1]],
+                  [6 * 10 * 64, 1024],
+                  [1024, 9 * 4]]
+
+    index_conv_layers = 1
+    index_fully_conected_layers = 6
+
+elif network_type == "classification":
+    """
+    shape_list = [[180, 320, 3],
+                  [[5, 5, 3, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [23 * 40 * 8, 1024],
+                  [1024, 9 * 4 * (n_bins + 1)]]
+    """
+
+    shape_list = [[180, 320, 3],
+                  [[5, 5, 3, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 1, 1, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [[5, 5, 8, 8],[1, 2, 2, 1]],
+                  [23 * 40 * 8, 1024],
+                  [1024, 9 * 4 * (n_bins + 1)]]
+    index_conv_layers = 1
+    index_fully_conected_layers = 6
+
+else:
+    pass
+
+
 network = nm.NeuralNetworkFishDetection(network_type,
-                                        width, height,
-                                        channels,
                                         dropout_list,
-                                        n_bins)
+                                        n_bins,
+                                        shape_list,
+                                        index_conv_layers,
+                                        index_fully_conected_layers)
 
 n_epochs = 10000
-mini_batch_size = 400
+mini_batch_size = 600
 print("n_epochs        %15s" % (str(n_epochs)))
 print("mini_batch_size %15s" % (str(mini_batch_size)))
 
-learning_rate = 10.0
+learning_rate = 0.1
 decay_rate = 0.6
-decay_steps = 270
+decay_steps = 180
 
 print("learning_rate   %15s" % (str(learning_rate)))
 print("decay_rate: %10s" % (str(decay_rate)))
