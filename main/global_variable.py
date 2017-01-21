@@ -1,11 +1,11 @@
 import random
 import sys
 import datetime
+import json
+
 
 import cv2
 import numpy as np
-
-import seed_function as sf
 
 EPSILON_BN = 1e-3
 DEFAULT_IMAGE_WIDTH = 1280
@@ -13,7 +13,7 @@ DEFAULT_IMAGE_HEIGHT = 720
 
 COLOR_PERTURBATION_STD = 0.1
 
-train_folder_dir = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/"
+TRAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/"
 
 MAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/main/"
 
@@ -26,12 +26,6 @@ RANDOM_SEED_NUMPY = random.randrange(1, UINT32_MAX - 1)
 
 SK_LEARN_RANDOM_STATE = random.randrange(1, UINT32_MAX - 1)
 TENSORFLOW_RANDOM_STATE = random.randrange(1, UINT32_MAX - 1)
-
-RANDOM_SEED_PYTHON = 3150656883
-RANDOM_SEED_NUMPY = 3093020161
-SK_LEARN_RANDOM_STATE = 3875883655
-TENSORFLOW_RANDOM_STATE = 2213826887
-
 
 print("EPSILON_BN                             %20s" % (str(EPSILON_BN)))
 print("DEFAULT_IMAGE_WIDTH                    %20s" % (str(DEFAULT_IMAGE_WIDTH)))
@@ -76,6 +70,18 @@ class ImageAnnotation:
             s = s + "x: %6s y: %6s w: %6s h: %6s\n" % (x, y, w, h)
         return s
 
+
+def read_annotation_files(annotation_files):
+
+    ipan = [] # image_paths_and_annotations
+    for file in annotation_files:
+        f = open(TRAIN_FOLDER_DIR + file, "r")
+        fa = json.load(f)
+        ipan = ipan + fa
+
+    ipan = [ImageAnnotation(ipan[i]) for i in range(len(ipan))]
+
+    return ipan
 
 
 def uoi(x1, y1, w1, h1, x2, y2, w2, h2):
@@ -227,7 +233,7 @@ def read_image_chunk(image_chunk_list, rfx, rfy):
 
     for i in range(N):
         img = cv2.imread(image_chunk_list[i].file_name)
-        img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
+        #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
 
         images[i] = img
 
@@ -250,9 +256,10 @@ def read_image_chunk(image_chunk_list, rfx, rfy):
 
 
 
+
 def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
-    ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
-    iw = int(rfx*DEFAULT_IMAGE_WIDTH)
+    #ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
+    #iw = int(rfx*DEFAULT_IMAGE_WIDTH)
 
     N = len(image_chunk_list)
 
@@ -263,12 +270,12 @@ def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
 
     for i in range(N):
         #print("i: " + str(i))
-        img = cv2.imread(image_chunk_list[i].file_name)
-        img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
+        #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
 
         images[i] = img/255.0
+        ih, iw, _ = images[i].shape
         rects = image_chunk_list[i].rects
-        #print("rects size: " + str(len(rects)))
 
         for j in range(len(rects)):
             x = rects[j][0]
@@ -276,14 +283,14 @@ def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
             w = rects[j][2]
             h = rects[j][3]
 
-            nx, ny, nw, nh = rectangle_transform(x, y, w, h, 0.0, 0.0, rfx, rfy)
+            #nx, ny, nw, nh = rectangle_transform(x, y, w, h, 0.0, 0.0, rfx, rfy)
 
             #print("i: " + str(i) + " j: " + str(j))
             #print("labels[i].shape: " + str(labels[i].shape))
-            labels[i][j, 0] = nx/iw
-            labels[i][j, 1] = ny/ih
-            labels[i][j, 2] = nw/iw
-            labels[i][j, 3] = nh/ih
+            labels[i][j, 0] = x / iw
+            labels[i][j, 1] = y / ih
+            labels[i][j, 2] = w / iw
+            labels[i][j, 3] = h / ih
 
             #mask_fish[int(ny):int(ny+nh), int(nx):int(nx+nw)] = 1.0
 
@@ -300,9 +307,9 @@ def read_image_chunk_real_labels(image_chunk_list, rfx, rfy):
 
 
 
-def read_image_chunk_hist_labels(image_chunk_list, rfx, rfy, n_bins=256):
-    ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
-    iw = int(rfx*DEFAULT_IMAGE_WIDTH)
+def read_image_chunk_hist_labels(image_chunk_list, n_bins=256):
+    #ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
+    #iw = int(rfx*DEFAULT_IMAGE_WIDTH)
 
     N = len(image_chunk_list)
 
@@ -313,11 +320,11 @@ def read_image_chunk_hist_labels(image_chunk_list, rfx, rfy, n_bins=256):
     n_rects_per_img = [0 for i in range(N)]
 
     for i in range(N):
-        img = cv2.imread(image_chunk_list[i].file_name)
-        img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
+        #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
 
         images[i] = img/255.0
-
+        ih, iw, _ = images[i].shape
         rects = image_chunk_list[i].rects
 
         M = len(rects)
@@ -329,12 +336,10 @@ def read_image_chunk_hist_labels(image_chunk_list, rfx, rfy, n_bins=256):
             w = rects[j][2]
             h = rects[j][3]
 
-            nx, ny, nw, nh = rectangle_transform(x, y, w, h, 0.0, 0.0, rfx, rfy)
-
-            x_bin_id = int(nx/iw * n_bins)
-            y_bin_id = int(ny/ih * n_bins)
-            w_bin_id = int(nw/iw * n_bins)
-            h_bin_id = int(nh/ih * n_bins)
+            x_bin_id = int(x/iw * n_bins)
+            y_bin_id = int(y/ih * n_bins)
+            w_bin_id = int(w/iw * n_bins)
+            h_bin_id = int(h/ih * n_bins)
 
             labels[i][j, 0, x_bin_id] = 1.0
             labels[i][j, 1, y_bin_id] = 1.0

@@ -11,7 +11,7 @@ import global_variable as gv
 
 random.seed(gv.RANDOM_SEED_PYTHON)
 np.random.seed(gv.RANDOM_SEED_NUMPY)
-train_folder_dir = gv.train_folder_dir
+train_folder_dir = gv.TRAIN_FOLDER_DIR
 
 def get_eigen(image_directories_for_color_perturbation):
 
@@ -100,6 +100,8 @@ def get_eigen(image_directories_for_color_perturbation):
             img = img + a_img
             img = img*255.0
             cv2.imwrite(dir_with_color_perturbed_imgs + image.replace(".jpg", "_cp.jpg"), img)
+        print("Processing: %s" % (index / N), end="\r")
+    print()
 
 
 def resize_image(image_file_name, width, height):
@@ -151,7 +153,7 @@ def resize_and_shift(img, rfx, rfy, sx, sy):
     return res
 
 
-def transform_images__resize_and_shift(annotation_files, shifts_and_resize_factors):
+def transform_images_resize_and_shift(annotation_files, shifts_and_resize_factors):
 
     for af in annotation_files:
         print(af)
@@ -170,7 +172,8 @@ def transform_images__resize_and_shift(annotation_files, shifts_and_resize_facto
 
             rects = iman.rects
 
-            img = cv2.imread(iman.file_name)
+            #print(gv.TRAIN_FOLDER_DIR + iman.file_name)
+            img = cv2.imread(gv.TRAIN_FOLDER_DIR + iman.file_name)
             for srf in shifts_and_resize_factors:
                 rfx = srf[0]
                 rfy = srf[1]
@@ -179,7 +182,7 @@ def transform_images__resize_and_shift(annotation_files, shifts_and_resize_facto
                 res = resize_and_shift(img, rfx, rfy, sx, sy)
                 file_name_ext = "_rfx_" + str(rfx).replace(".","p") + "_rfy_" + str(rfy).replace(".","p") + "_sx_" + str(sx) + "_sy_" + str(sy) + ".jpg"
                 new_name = iman.file_name.replace(".jpg", file_name_ext)
-                cv2.imwrite(new_name, res)
+                cv2.imwrite(gv.TRAIN_FOLDER_DIR + new_name, res)
 
                 annotations_list = []
                 for rec in rects:
@@ -203,17 +206,63 @@ def transform_images__resize_and_shift(annotation_files, shifts_and_resize_facto
                 new_annotations.append(annotations_dict)
             index = index + 1
             print("Processed: %10s" % (str(index/N)), end="\r")
+        print()
 
 
         f.close()
 
-        new_file_name = train_folder_dir + "y_" + af
+        new_file_name = train_folder_dir + af
         print(new_file_name)
 
-        g = open(new_file_name, "w")
+        g = open(new_file_name, "w+")
         json_file_content = json.dump(annotations + new_annotations, g, sort_keys=True, indent=4, ensure_ascii=False)
         g.close()
         print()
+
+
+def parse_json(annotation_files, width, height, ratio):
+
+    new_annotation_files = []
+    for af in annotation_files:
+
+        f = open(train_folder_dir + af)
+        annotations = json.load(f)
+        new_annotations = []
+
+        for an in annotations:
+
+            iman = gv.ImageAnnotation(an)
+            rects = iman.rects
+            annotations_list = []
+            for rec in rects:
+                x0 = rec[0]
+                y0 = rec[1]
+                w0 = rec[2]
+                h0 = rec[3]
+
+                nx, ny, nw, nh = gv.rectangle_transform(x0, y0, w0, h0, 0.0, 0.0, ratio, ratio)
+
+                image_dict = {"class": "rect",
+                              "height": nh,
+                              "width": nw,
+                              "x": nx,
+                              "y": ny}
+                annotations_list.append(image_dict)
+
+            new_name = iman.file_name
+            new_name = new_name.replace("1280_x_720", str(width) + "_x_" + str(height))
+
+            annotations_dict = {"annotations": annotations_list,
+                                "class": "image",
+                                "filename": new_name}
+            new_annotations.append(annotations_dict)
+
+        new_annotation_file_name = "y_" + af.replace("1280_x_720", str(width) + "_x_" + str(height))
+        g = open(gv.TRAIN_FOLDER_DIR + new_annotation_file_name, "w")
+        json_file_content = json.dump(new_annotations, g, sort_keys=True, indent=4, ensure_ascii=False)
+        g.close()
+        new_annotation_files.append(new_annotation_file_name)
+    return new_annotation_files
 
 
 image_directories_for_color_perturbation = ["ALB", "BET", "DOL", "LAG", "NoF", "OTHER", "SHARK", "YFT"]
@@ -239,35 +288,40 @@ image_directories_and_rotation_angles = {"ALB": [0],
                                          "YFT": [-5, 0],
                                          "YFT_cp": [-5, 0]}
 
-ratio = 1.0
+ratio = 0.25
 default_width = 1280
 default_height = 720
 
 transform_images_rotation(image_directories_and_rotation_angles, int(ratio*default_width), int(ratio*default_height))
 
 
-annotation_files = ["fish_positions_ALB_1280_x_720.json",
-                    "fish_positions_LAG_1280_x_720.json",
-                    "fish_positions_YFT_1280_x_720.json",
-                    "fish_positions_BET_1280_x_720.json",
-                    "fish_positions_OTHER_1280_x_720.json",
-                    "fish_positions_DOL_1280_x_720.json",
-                    "fish_positions_SHARK_1280_x_720.json",
-                    "fish_positions_Nof_1280_x_720.json",
-                    "fish_positions_ALB_1280_x_720_cp.json",
-                    "fish_positions_LAG_1280_x_720_cp.json",
-                    "fish_positions_YFT_1280_x_720_cp.json",
-                    "fish_positions_BET_1280_x_720_cp.json",
-                    "fish_positions_OTHER_1280_x_720_cp.json",
-                    "fish_positions_DOL_1280_x_720_cp.json",
-                    "fish_positions_SHARK_1280_x_720_cp.json",
-                    "fish_positions_Nof_1280_x_720_cp.json"]
+annotation_files = ["ind_fish_positions_ALB_1280_x_720.json",
+                    "ind_fish_positions_LAG_1280_x_720.json",
+                    "ind_fish_positions_YFT_1280_x_720.json",
+                    "ind_fish_positions_BET_1280_x_720.json",
+                    "ind_fish_positions_OTHER_1280_x_720.json",
+                    "ind_fish_positions_DOL_1280_x_720.json",
+                    "ind_fish_positions_SHARK_1280_x_720.json",
+                    "ind_fish_positions_Nof_1280_x_720.json",
+                    "ind_fish_positions_ALB_1280_x_720_cp.json",
+                    "ind_fish_positions_LAG_1280_x_720_cp.json",
+                    "ind_fish_positions_YFT_1280_x_720_cp.json",
+                    "ind_fish_positions_BET_1280_x_720_cp.json",
+                    "ind_fish_positions_OTHER_1280_x_720_cp.json",
+                    "ind_fish_positions_DOL_1280_x_720_cp.json",
+                    "ind_fish_positions_SHARK_1280_x_720_cp.json",
+                    "ind_fish_positions_Nof_1280_x_720_cp.json"]
 
 
-shifts_and_resize_factors = [[0.9, 0.9, 0, 0],
-                             [0.9, 0.9, 50, 0],
-                             [0.9, 0.9, 50, 50],
-                             [0.9, 0.9, 0, 50]]
+new_annotation_files = parse_json(annotation_files,
+                                  int(ratio*default_width),
+                                  int(ratio*default_height),
+                                  ratio)
+
+shifts_and_resize_factors = [[0.96, 0.96, 0, 0],
+                             [0.96, 0.96, 10, 0],
+                             [0.96, 0.96, 10, 10],
+                             [0.96, 0.96, 0, 10]]
 
 
-transform_images__resize_and_shift(annotation_files, shifts_and_resize_factors)
+transform_images_resize_and_shift(new_annotation_files, shifts_and_resize_factors)
