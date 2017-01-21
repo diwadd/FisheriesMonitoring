@@ -23,7 +23,6 @@ class NeuralNetworkFishDetection:
 
     def automatic_model_reg_xavier(self,
                                    shape_list,
-                                   dropout_list,
                                    index_conv_layers,
                                    index_fully_conected_layers,
                                    network_type):
@@ -37,7 +36,7 @@ class NeuralNetworkFishDetection:
                                                    shape_list[0][2]],
                                             name="network_input")
 
-        #
+        # ----------------------------------------------------------
         # Example shape_list:
         # shape_list = [
         #               [120, 320, 3], # input image dimensions
@@ -47,7 +46,7 @@ class NeuralNetworkFishDetection:
         #               [23 * 40 * 8, 1024], # fully connected layer
         #               [1024, 9 * 4 * 128 + 1] # readout layer
         #               ]
-        #
+        # ----------------------------------------------------------
 
         dropout_index = 0
         current_layer = self.network_input
@@ -74,12 +73,9 @@ class NeuralNetworkFishDetection:
                                             self.epsilon)
 
             conv_layer = tf.nn.relu(bn)
-
-            dropout_name_for_layer = "dropout_conv_" + str(i)
-            self.dropout_name_list.append(dropout_name_for_layer)
             conv_layer_dropped = tf.nn.dropout(conv_layer,
-                                               dropout_list[dropout_index],
-                                               name=dropout_name_for_layer)
+                                               self.dropout_variable_list[dropout_index],
+                                               name="conv_tf.nn.dropout_" + str(i))
             dropout_index = dropout_index + 1
 
             current_layer = conv_layer_dropped
@@ -108,11 +104,9 @@ class NeuralNetworkFishDetection:
 
             fully_connected = tf.nn.relu(bn_connected)
 
-            dropout_name_for_layer = "dropout_fully_" + str(j)
-            self.dropout_name_list.append(dropout_name_for_layer)
             fully_connected_dropped = tf.nn.dropout(fully_connected,
-                                                    dropout_list[dropout_index],
-                                                    name=dropout_name_for_layer)
+                                                    self.dropout_variable_list[dropout_index],
+                                                    name="fully_tf.nn.dropout_" + str(j))
             dropout_index = dropout_index + 1
 
             current_layer = fully_connected_dropped
@@ -158,7 +152,32 @@ class NeuralNetworkFishDetection:
 
         self.n_bins = n_bins
 
-        self.dropout_one =
+        self.dropout_one = tf.placeholder(tf.float32)
+        self.dropout_two = tf.placeholder(tf.float32)
+        self.dropout_three = tf.placeholder(tf.float32)
+        self.dropout_four = tf.placeholder(tf.float32)
+        self.dropout_five = tf.placeholder(tf.float32)
+        self.dropout_six = tf.placeholder(tf.float32)
+        self.dropout_seven = tf.placeholder(tf.float32)
+        self.dropout_eight = tf.placeholder(tf.float32)
+        self.dropout_nine = tf.placeholder(tf.float32)
+
+        self.dropout_list = dropout_list
+        self.dropout_variable_list = [self.dropout_one,
+                                      self.dropout_two,
+                                      self.dropout_three,
+                                      self.dropout_four,
+                                      self.dropout_five,
+                                      self.dropout_six,
+                                      self.dropout_seven,
+                                      self.dropout_eight,
+                                      self.dropout_nine]
+
+        NUMBER_OF_DROPOUT_PLACEHOLDERS = len(self.dropout_variable_list)
+        if len(self.dropout_list) < NUMBER_OF_DROPOUT_PLACEHOLDERS:
+            n_missing_dropout_list_elements = NUMBER_OF_DROPOUT_PLACEHOLDERS - len(self.dropout_list)
+            dropout_list_addition = [1.0 for i in range(n_missing_dropout_list_elements)]
+            self.dropout_list = self.dropout_list + dropout_list_addition
 
 
         self.binning_array_width = None
@@ -166,7 +185,7 @@ class NeuralNetworkFishDetection:
 
         self.sess = None
         self.saver_loader = None
-        self.dropout_name_list = [None for i in range(len(dropout_list))]
+
 
         self.increment_constant = tf.constant(1, dtype=tf.float32, name="increment_constant")
         self.control_step_number = tf.Variable(0, dtype=tf.float32, name="epoch_step_number")
@@ -180,7 +199,6 @@ class NeuralNetworkFishDetection:
         if network_type == "regression":
             self.network_type = network_type
             self.automatic_model_reg_xavier(shape_list,
-                                            dropout_list,
                                             index_conv_layers,
                                             index_fully_conected_layers,
                                             network_type)
@@ -189,7 +207,6 @@ class NeuralNetworkFishDetection:
         elif network_type == "classification":
             self.network_type = network_type
             self.automatic_model_reg_xavier(shape_list,
-                                            dropout_list,
                                             index_conv_layers,
                                             index_fully_conected_layers,
                                             network_type)
@@ -202,9 +219,18 @@ class NeuralNetworkFishDetection:
             self.binning_array_width = [i * self.width / self.n_bins for i in range(self.n_bins)]
             self.binning_array_height = [i * self.height / self.n_bins for i in range(self.n_bins)]
 
-
         self.parameter_dict = {self.network_input: None,
-                               self.network_expected_output: None}
+                               self.network_expected_output: None,
+                               self.dropout_one: self.dropout_list[0],
+                               self.dropout_two: self.dropout_list[1],
+                               self.dropout_three: self.dropout_list[2],
+                               self.dropout_four: self.dropout_list[3],
+                               self.dropout_five: self.dropout_list[4],
+                               self.dropout_six: self.dropout_list[5],
+                               self.dropout_seven: self.dropout_list[6],
+                               self.dropout_eight: self.dropout_list[7],
+                               self.dropout_nine: self.dropout_list[8]}
+
 
 
     def setup_loss(self, mini_batch_size):
@@ -295,8 +321,7 @@ class NeuralNetworkFishDetection:
             else:
                 pass
 
-            self.parameter_dict[self.network_input] = images
-            self.parameter_dict[self.network_expected_output] = labels
+            self.set_parameter_dict_for_evaluation(images, labels)
 
             predicted_rects = (self.network_output).eval(session=self.sess, feed_dict=self.parameter_dict)
 
@@ -324,6 +349,37 @@ class NeuralNetworkFishDetection:
         average_uoi = uoi_sum/uoi_images
         return average_uoi, total_loss/(2.0*len(x_valid))
 
+
+
+    def set_parameter_dict_for_train(self, images, labels):
+
+        self.parameter_dict = {self.network_input: images,
+                               self.network_expected_output: labels,
+                               self.dropout_one: self.dropout_list[0],
+                               self.dropout_two: self.dropout_list[1],
+                               self.dropout_three: self.dropout_list[2],
+                               self.dropout_four: self.dropout_list[3],
+                               self.dropout_five: self.dropout_list[4],
+                               self.dropout_six: self.dropout_list[5],
+                               self.dropout_seven: self.dropout_list[6],
+                               self.dropout_eight: self.dropout_list[7],
+                               self.dropout_nine: self.dropout_list[8]}
+
+
+
+    def set_parameter_dict_for_evaluation(self, images, labels):
+
+        self.parameter_dict = {self.network_input: images,
+                               self.network_expected_output: labels,
+                               self.dropout_one: 1.0,
+                               self.dropout_two: 1.0,
+                               self.dropout_three: 1.0,
+                               self.dropout_four: 1.0,
+                               self.dropout_five: 1.0,
+                               self.dropout_six: 1.0,
+                               self.dropout_seven: 1.0,
+                               self.dropout_eight: 1.0,
+                               self.dropout_nine: 1.0}
 
 
     def train(self,
@@ -384,14 +440,16 @@ class NeuralNetworkFishDetection:
                 else:
                     pass
 
-                self.parameter_dict[self.network_input] = images
-                self.parameter_dict[self.network_expected_output] = labels
+
+                self.set_parameter_dict_for_train(images, labels)
+
                 #no = self.network_output.eval(session=self.sess, feed_dict=self.parameter_dict)
                 #print(no)
 
                 (self.train_step).run(session=self.sess, feed_dict=self.parameter_dict)
 
-                #if (batch % 5 == 0):
+                self.set_parameter_dict_for_evaluation(images, labels)
+
                 c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
                 print("(in batch loop, %10s) c_val_train value: %10s" % (str(batch), str(c_val_train)))
 
