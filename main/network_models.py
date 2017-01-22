@@ -196,6 +196,7 @@ class NeuralNetworkFishDetection:
         self.regression_network = False
         self.classification_network = False
 
+
         if network_type == "regression":
             self.network_type = network_type
             self.automatic_model_reg_xavier(shape_list,
@@ -312,14 +313,16 @@ class NeuralNetworkFishDetection:
             mini_batch = x_valid[ptr:ptr + mini_batch_size]
             ptr = ptr + mini_batch_size
 
+            print("Reading images and labels")
             images = None
             labels = None
             if self.regression_network == True:
-                images, labels = gv.read_image_chunk_real_labels(mini_batch)
+                images, labels, n_rects_per_img = gv.read_image_chunk_real_labels(mini_batch)
             elif self.classification_network == True:
                 images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.n_bins)
             else:
                 pass
+            images = gv.scale_image_by_255(images)
 
             self.set_parameter_dict_for_evaluation(images, labels)
 
@@ -329,7 +332,7 @@ class NeuralNetworkFishDetection:
             uoi_sum_batch = None
             uoi_images_batch = None
             if self.regression_network == True:
-                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels(labels, predicted_rects)
+                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels(labels, predicted_rects, n_rects_per_img)
 
             elif self.classification_network == True:
                 uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels_cla_version(labels,
@@ -342,6 +345,8 @@ class NeuralNetworkFishDetection:
 
             uoi_sum = uoi_sum + uoi_sum_batch
             uoi_images = uoi_images + uoi_images_batch
+
+            #print("uoi_sum %10s uoi_images %10s" % (uoi_sum, uoi_images))
 
             loss = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
             total_loss = total_loss + (2.0*mini_batch_size)*loss
@@ -413,11 +418,11 @@ class NeuralNetworkFishDetection:
 
         n_batches_per_epoch = round(len(x_train) / mini_batch_size)
 
-        print("Untrained network:")
-        average_uoi, total_loss = self.uoi_and_loss_for_image_set(x_valid)
+        #print("Untrained network:")
+        #average_uoi, total_loss = self.uoi_and_loss_for_image_set(x_valid)
 
-        print("Average uoi: %15s" % (str(average_uoi)))
-        print("Total loss: %15s" % (str(total_loss)))
+        #print("Average uoi: %15s" % (str(average_uoi)))
+        #print("Total loss: %15s" % (str(total_loss)))
 
         print("\nTraining...")
         print("epoch_step_number: " + str(self.sess.run(self.control_step_number)))
@@ -431,15 +436,17 @@ class NeuralNetworkFishDetection:
                 mini_batch = x_train[ptr:ptr + mini_batch_size]
                 ptr = ptr + mini_batch_size
 
+                print("Reading images and labels")
                 images = None
                 labels = None
                 if self.regression_network == True:
-                    images, labels = gv.read_image_chunk_real_labels(mini_batch)
+                    images, labels, n_rects_per_img = gv.read_image_chunk_real_labels(mini_batch)
                 elif self.classification_network == True:
                     images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.n_bins)
                 else:
                     pass
 
+                images = gv.scale_image_by_255(images)
 
                 self.set_parameter_dict_for_train(images, labels)
 
@@ -498,6 +505,9 @@ class NeuralNetworkFishDetection:
             mini_batch = x_test[ptr:ptr + mini_batch_size]
             images, labels = gv.read_image_chunk_real_labels(mini_batch)
 
+            if self.sobel_edge_flag == True:
+                images = gv.add_sobel_edge_on_images(images)
+
             ptr = ptr + mini_batch_size
 
             #print("Processed %15s mini_batches o validation set out of %15s" % (str(n), str(n_batches)), end="\r")
@@ -514,6 +524,8 @@ class NeuralNetworkFishDetection:
                                                                          feed_dict=self.parameter_dict)
             else:
                 pass
+
+
 
 
 

@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+from matplotlib import pyplot as plt
+
 import global_variable as gv
 import network_models as nm
 
@@ -77,11 +79,8 @@ print("x_test size: %s" % (str(len(x_test))))
 
 #image_chunk_list = random.sample(x_train, CHUNK_SIZE)
 
-#images, labels, _ = gv.read_image_chunk_hist_labels(image_chunk_list, n_bins=16)
+#images, labels = gv.read_image_chunk_fish_mask(image_chunk_list, 180, 320, 2*24, 2*48)
 
-#print("Histogram check")
-#print(image_chunk_list[0])
-#print(labels[0].reshape(9,4,17))
 
 
 channels = 3
@@ -94,8 +93,8 @@ print("dropout_list: " + str(dropout_list))
 print("n_bins: " + str(n_bins))
 
 
-#network_type = "regression"
-network_type = "classification"
+network_type = "regression"
+#network_type = "classification"
 print("network_type: " + str(network_type))
 
 
@@ -128,14 +127,14 @@ if network_type == "regression":
                   [1024, 9 * 4]]
                   """
 
-    shape_list = [[180, 320, 3],
-                  [[9, 9, 3, 4],[1, 2, 2, 1]],
-                  [[7, 7, 4, 8],[1, 2, 2, 1]],
-                  [[5, 5, 8, 16],[1, 2, 2, 1]],
-                  [[3, 3, 16, 32],[1, 2, 2, 1]],
-                  [[3, 3, 32, 64],[1, 2, 2, 1]],
-                  [6 * 10 * 64, 1024],
-                  [1024, 9 * 4]]
+    shape_list = [[180, 320, 4],
+                  [[3, 3, 4, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 4],[1, 2, 2, 1]],
+                  [6 * 10 * 4, 8],
+                  [8, 9 * 4]]
 
     index_conv_layers = 1
     index_fully_conected_layers = 6
@@ -152,8 +151,8 @@ elif network_type == "classification":
                   [1024, 9 * 4 * (n_bins + 1)]]
     """
 
-    shape_list = [[180, 320, 3],
-                  [[9, 9, 3, 4],[1, 2, 2, 1]],
+    shape_list = [[180, 320, 4],
+                  [[9, 9, 4, 4],[1, 2, 2, 1]],
                   [[7, 7, 4, 8],[1, 2, 2, 1]],
                   [[5, 5, 8, 16],[1, 2, 2, 1]],
                   [[3, 3, 16, 32],[1, 2, 2, 1]],
@@ -179,7 +178,7 @@ mini_batch_size = 600
 print("n_epochs        %15s" % (str(n_epochs)))
 print("mini_batch_size %15s" % (str(mini_batch_size)))
 
-learning_rate = 1.0
+learning_rate = 0.1
 decay_rate = 0.6
 decay_steps = 180
 

@@ -101,11 +101,17 @@ def uoi(x1, y1, w1, h1, x2, y2, w2, h2):
     area2 = abs(bx1 - bx2) * abs(by1 - by2)
 
     union = area1 + area2 - overlap
+    #print("union: " + str(union))
 
-    return (overlap/union)
+    if round(union, 9) == 0.0:
+        return 0.0
+    else:
+        return (overlap/union)
 
 
-def uoi_for_set_of_labels(labels, predicted_labels):
+def uoi_for_set_of_labels(labels,
+                          predicted_labels,
+                          n_rects_per_img):
     N = len(labels)
 
     labels = [labels[i].reshape((9, 4)) for i in range(N)]
@@ -115,11 +121,15 @@ def uoi_for_set_of_labels(labels, predicted_labels):
     uoi_images_batch = 0
     for i in range(N):
 
-        for j in range(len(labels[i])):
+        M = n_rects_per_img[i]
+
+        for j in range(M):
             x1 = labels[i][j, 0]
             y1 = labels[i][j, 1]
             w1 = labels[i][j, 2]
             h1 = labels[i][j, 3]
+
+            #print("x1: %8s y1: %8s w1: %8s h1: %8s" % (str(x1), str(y1), str(w1), str(h1)))
 
             """
             The uoi is calculated only for the actual fish
@@ -127,19 +137,24 @@ def uoi_for_set_of_labels(labels, predicted_labels):
             well the network performs with deternining the actual
             number of fish.
             """
-            if (int(x1) == -1 and
-                int(y1) == -1 and
-                int(w1) == -1 and
-                int(h1) == -1):
-                continue
+            #if (round(x1, 9) == 0.0 and
+            #    round(y1, 9) == 0.0 and
+            #    round(w1, 9) == 0.0 and
+            #    round(h1, 9) == 0.0):
+            #    continue
 
             x2 = predicted_labels[i][j, 0]
             y2 = predicted_labels[i][j, 1]
             w2 = predicted_labels[i][j, 2]
             h2 = predicted_labels[i][j, 3]
 
+            #print("x2: %8s y2: %8s w2: %8s h2: %8s" % (str(x2), str(y2), str(w2), str(h2)))
+
             uoi_sum_batch = uoi_sum_batch + uoi(x1, y1, w1, h1, x2, y2, w2, h2)
+            #print("uoi_sum_batch: " + str(uoi_sum_batch))
             uoi_images_batch = uoi_images_batch + 1
+    #if uoi_images_batch == 0:
+    #    sys.exit("ERROR! uoi_images_batch == 0")
     return uoi_sum_batch, uoi_images_batch
 
 
@@ -222,35 +237,58 @@ def rectangle_transform(x, y, w, h, sx, sy, rfx, rfy):
 
     return nx, ny, nw, nh
 
-def read_image_chunk(image_chunk_list, rfx, rfy):
-    ih = int(rfy*DEFAULT_IMAGE_HEIGHT)
-    iw = int(rfx*DEFAULT_IMAGE_WIDTH)
+
+def resize_fish_mask_to_original_image_size(fish_mask, height, width, nr_of_h_bins, nr_of_w_bins):
+
+    rfx = nr_of_w_bins/width
+    rfy = nr_of_h_bins/height
+
+    resized_fish_mask = cv2.resize(fish_mask,
+                                   None,
+                                   fx=(1.0 / rfx),
+                                   fy=(1.0 / rfy),
+                                   interpolation=cv2.INTER_CUBIC)
+
+    resized_fish_mask[resized_fish_mask != 0] = 1.0
+
+    return resized_fish_mask
+
+
+
+def read_image_chunk_fish_mask(image_chunk_list, height, width, nr_of_h_bins, nr_of_w_bins):
 
     N = len(image_chunk_list)
 
-    images = [np.zeros((DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH)) for i in range(N)]
-    labels = [np.zeros((DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH)) for i in range(N)]
+    images = [np.zeros((height, width)) for i in range(N)]
+    labels = [np.zeros((nr_of_h_bins, nr_of_w_bins)) for i in range(N)]
 
     for i in range(N):
-        img = cv2.imread(image_chunk_list[i].file_name)
-        #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
-
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
         images[i] = img
 
-        mask_fish = np.zeros((ih, iw))
+        fish_mask = np.zeros((nr_of_h_bins, nr_of_w_bins))
         rects = image_chunk_list[i].rects
 
         for rec in rects:
-            x = rec[0]
-            y = rec[1]
-            w = rec[2]
-            h = rec[3]
+            ix = rec[0]
+            iy = rec[1]
+            iw = rec[2]
+            ih = rec[3]
 
-            nx, ny, nw, nh = rectangle_transform(x, y, w, h, 0.0, 0.0, rfx, rfy)
+            x1 = ix
+            y1 = iy
+            x2 = ix + iw
+            y2 = iy + ih
 
-            mask_fish[int(ny):int(ny+nh), int(nx):int(nx+nw)] = 1.0
+            x1_bin = int(x1 / width * nr_of_w_bins)
+            x2_bin = int(x2 / width * nr_of_w_bins)
 
-        labels[i] = mask_fish
+            y1_bin = int(y1 / height * nr_of_h_bins)
+            y2_bin = int(y2 / height * nr_of_h_bins)
+
+            fish_mask[y1_bin:y2_bin, x1_bin:x2_bin] = 1.0
+
+        labels[i] = fish_mask
 
     return images, labels
 
@@ -262,16 +300,20 @@ def read_image_chunk_real_labels(image_chunk_list):
     N = len(image_chunk_list)
 
     images = [np.zeros((DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH)) for i in range(N)]
-    labels = [-1.0*np.ones((9, 4)) for i in range(N)]
+    labels = [np.zeros((9, 4)) for i in range(N)]
+    n_rects_per_img = [0 for i in range(N)]
 
     for i in range(N):
         img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
 
-        images[i] = img/255.0
+        images[i] = img
         ih, iw, _ = images[i].shape
         rects = image_chunk_list[i].rects
 
-        for j in range(len(rects)):
+        M = len(rects)
+        n_rects_per_img[i] = M
+
+        for j in range(M):
             x = rects[j][0]
             y = rects[j][1]
             w = rects[j][2]
@@ -284,7 +326,7 @@ def read_image_chunk_real_labels(image_chunk_list):
 
     labels = [labels[i].reshape((9 * 4, )) for i in range(N)]
 
-    return images, labels
+    return images, labels, n_rects_per_img
 
 
 
@@ -304,7 +346,7 @@ def read_image_chunk_hist_labels(image_chunk_list, n_bins=256):
         img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
         #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
 
-        images[i] = img/255.0
+        images[i] = img
         ih, iw, _ = images[i].shape
         rects = image_chunk_list[i].rects
 
@@ -337,3 +379,50 @@ def read_image_chunk_hist_labels(image_chunk_list, n_bins=256):
     labels = [labels[i].reshape((9 * 4 * (n_bins + 1))) for i in range(N)]
 
     return images, labels, n_rects_per_img
+
+
+
+def add_sobel_edge(img):
+
+    h, w, c = img.shape
+    new_img = np.zeros((h, w, c + 1))
+
+    img = cv2.fastNlMeansDenoisingColored(img,None,10,10,7,21)
+    new_img[:, :, 0:c] = img
+
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+    #laplacian = cv2.Laplacian(img, cv2.CV_64F)
+    sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
+    sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=5)
+
+    new_img[:, :, c] = sobelx + sobely
+
+    return new_img
+
+
+def add_sobel_edge_on_images(images):
+    N = len(images)
+    for i in range(N):
+        print("Processing: %10s" % (str((i+1)/N)), end = "\r")
+        images[i] = add_sobel_edge(images[i])
+    print("Exting add_sobel_edge_on_images")
+    return images
+
+
+
+def scale_image_by_255(images):
+    print("In scale_image_by_255")
+    N = len(images)
+    for i in range(N):
+        images[i] = images[i]/255.0
+
+    print("Exting scale_image_by_255")
+    return images
+
+
+
+
+
+
+
