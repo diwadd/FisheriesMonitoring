@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from matplotlib import pyplot as plt
 
 import global_variable as gv
 import network_models as nm
@@ -18,7 +17,7 @@ print("VALIDATION_SIZE %15s" % (str(VALIDATION_SIZE)))
 print("TEST_SIZE %15s" % (str(TEST_SIZE)))
 print("CHUNK_SIZE %15s" % (str(CHUNK_SIZE)))
 
-
+"""
 annotation_files = ["y_ind_fish_positions_ALB_320_x_180.json",
                     "y_ind_fish_positions_LAG_320_x_180.json",
                     "y_ind_fish_positions_YFT_320_x_180.json",
@@ -35,6 +34,24 @@ annotation_files = ["y_ind_fish_positions_ALB_320_x_180.json",
                     "y_ind_fish_positions_DOL_320_x_180_cp.json",
                     "y_ind_fish_positions_SHARK_320_x_180_cp.json",
                     "y_ind_fish_positions_Nof_320_x_180_cp.json"]
+"""
+
+annotation_files = ["y_ind_fish_positions_ALB_512_x_288.json",
+                    "y_ind_fish_positions_LAG_512_x_288.json",
+                    "y_ind_fish_positions_YFT_512_x_288.json",
+                    "y_ind_fish_positions_BET_512_x_288.json",
+                    "y_ind_fish_positions_OTHER_512_x_288.json",
+                    "y_ind_fish_positions_DOL_512_x_288.json",
+                    "y_ind_fish_positions_SHARK_512_x_288.json",
+                    "y_ind_fish_positions_Nof_512_x_288.json",
+                    "y_ind_fish_positions_ALB_512_x_288_cp.json",
+                    "y_ind_fish_positions_LAG_512_x_288_cp.json",
+                    "y_ind_fish_positions_YFT_512_x_288_cp.json",
+                    "y_ind_fish_positions_BET_512_x_288_cp.json",
+                    "y_ind_fish_positions_OTHER_512_x_288_cp.json",
+                    "y_ind_fish_positions_DOL_512_x_288_cp.json",
+                    "y_ind_fish_positions_SHARK_512_x_288_cp.json",
+                    "y_ind_fish_positions_Nof_512_x_288_cp.json"]
 
 print(annotation_files)
 
@@ -84,13 +101,16 @@ print("x_test size: %s" % (str(len(x_test))))
 
 
 channels = 3
-dropout_list = [0.5 for i in range(6)]
-n_bins = 180
-width = 320
-height = 180
+dropout_list = [0.8]
+width = 512
+height = 288
+nr_of_h_bins = int(height*0.125)
+nr_of_w_bins = int(width*0.125)
+
 print("channels:" + str(channels))
 print("dropout_list: " + str(dropout_list))
-print("n_bins: " + str(n_bins))
+print("nr_of_h_bins: " + str(nr_of_h_bins))
+print("nr_of_w_bins: " + str(nr_of_w_bins))
 
 
 network_type = "regression"
@@ -126,18 +146,39 @@ if network_type == "regression":
                   [6 * 10 * 64, 1024],
                   [1024, 9 * 4]]
                   """
+    """
+    shape_list = [[180, 320, 1],
+                  [[7, 7, 1, 1],[1, 2, 2, 1]],
+                  [[5, 5, 1, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 8],[1, 2, 2, 1]],
+                  [[3, 3, 8, 16],[1, 2, 2, 1]],
+                  [[3, 3, 16, 32],[1, 2, 2, 1]],
+                  [6 * 10 * 32, 6561],
+                  [6561, nr_of_h_bins * nr_of_w_bins]]
+    """
 
-    shape_list = [[180, 320, 4],
-                  [[3, 3, 4, 4],[1, 2, 2, 1]],
-                  [[3, 3, 4, 4],[1, 2, 2, 1]],
-                  [[3, 3, 4, 4],[1, 2, 2, 1]],
-                  [[3, 3, 4, 4],[1, 2, 2, 1]],
-                  [[3, 3, 4, 4],[1, 2, 2, 1]],
-                  [6 * 10 * 4, 8],
-                  [8, 9 * 4]]
+    """
+    shape_list = [[288, 512, 1],
+                  [[9, 9, 1, 8],[1, 2, 2, 1]],
+                  [[7, 7, 8, 16],[1, 2, 2, 1]],
+                  [[5, 5, 16, 32],[1, 2, 2, 1]],
+                  [[3, 3, 32, 64],[1, 2, 2, 1]],
+                  [[3, 3, 64, 64],[1, 2, 2, 1]],
+                  [9 * 16 * 64, 6*2048],
+                  [6*2048, nr_of_h_bins * nr_of_w_bins]]
+    """
+
+
+    shape_list = [[288, 512, 1],
+                  [[5, 5, 1, 8],[1, 4, 4, 1]],
+                  [[5, 5, 8, 12],[1, 4, 4, 1]],
+                  [[5, 5, 12, 16],[1, 4, 4, 1]],
+                  [5 * 8 * 16, 2*2048],
+                  [2*2048, nr_of_h_bins * nr_of_w_bins]]
+
 
     index_conv_layers = 1
-    index_fully_conected_layers = 6
+    index_fully_conected_layers = 4
 
 elif network_type == "classification":
     """
@@ -151,14 +192,28 @@ elif network_type == "classification":
                   [1024, 9 * 4 * (n_bins + 1)]]
     """
 
-    shape_list = [[180, 320, 4],
-                  [[9, 9, 4, 4],[1, 2, 2, 1]],
-                  [[7, 7, 4, 8],[1, 2, 2, 1]],
-                  [[5, 5, 8, 16],[1, 2, 2, 1]],
+    """
+    shape_list = [[180, 320, 3],
+                  [[7, 7, 3, 1],[1, 2, 2, 1]],
+                  [[5, 5, 1, 2],[1, 2, 2, 1]],
+                  [[3, 3, 2, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 8],[1, 2, 2, 1]],
+                  [[3, 3, 8, 16],[1, 2, 2, 1]],
+                  [6 * 10 * 16, 4096],
+                  [4096, nr_of_h_bins * nr_of_w_bins]]
+    """
+
+
+    shape_list = [[288, 512, 1],
+                  [[5, 5, 1, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 8],[1, 2, 2, 1]],
+                  [[3, 3, 8, 16],[1, 2, 2, 1]],
                   [[3, 3, 16, 32],[1, 2, 2, 1]],
                   [[3, 3, 32, 64],[1, 2, 2, 1]],
-                  [6 * 10 * 64, 1024],
-                  [1024, 9 * 4 * (n_bins + 1)]]
+                  [9 * 16 * 64, 8*2048],
+                  [8*2048, nr_of_h_bins * nr_of_w_bins]]
+
+
     index_conv_layers = 1
     index_fully_conected_layers = 6
 
@@ -168,17 +223,18 @@ else:
 
 network = nm.NeuralNetworkFishDetection(network_type,
                                         dropout_list,
-                                        n_bins,
                                         shape_list,
                                         index_conv_layers,
-                                        index_fully_conected_layers)
+                                        index_fully_conected_layers,
+                                        nr_of_h_bins,
+                                        nr_of_w_bins)
 
 n_epochs = 10000
-mini_batch_size = 600
+mini_batch_size = 1000
 print("n_epochs        %15s" % (str(n_epochs)))
 print("mini_batch_size %15s" % (str(mini_batch_size)))
 
-learning_rate = 0.1
+learning_rate = 0.001
 decay_rate = 0.6
 decay_steps = 180
 

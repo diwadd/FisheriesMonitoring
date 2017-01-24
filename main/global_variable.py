@@ -19,6 +19,9 @@ MAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/ma
 
 MINI_BATCHES_FOR_LARGE_SET_PROCESSING = 600
 
+#CV_READ_OPTION = 1
+CV_READ_OPTION = 0
+
 UINT32_MAX = 4294967295
 
 RANDOM_SEED_PYTHON = random.randrange(1, UINT32_MAX - 1)
@@ -34,6 +37,8 @@ print("DEFAULT_IMAGE_HEIGHT                   %20s" % (str(DEFAULT_IMAGE_HEIGHT)
 print("COLOR_PERTURBATION_STD                 %20s" % (str(COLOR_PERTURBATION_STD)))
 
 print("MINI_BATCHES_FOR_LARGE_SET_PROCESSING  %20s" % (str(MINI_BATCHES_FOR_LARGE_SET_PROCESSING)))
+
+print("CV_READ_OPTION:                        %20s" % (str(CV_READ_OPTION)))
 
 print("RANDOM_SEED_PYTHON                     %20s" % (str(RANDOM_SEED_PYTHON)))
 print("RANDOM_SEED_NUMPY                      %20s" % (str(RANDOM_SEED_NUMPY)))
@@ -255,7 +260,12 @@ def resize_fish_mask_to_original_image_size(fish_mask, height, width, nr_of_h_bi
 
 
 
-def read_image_chunk_fish_mask(image_chunk_list, height, width, nr_of_h_bins, nr_of_w_bins):
+def read_image_chunk_fish_mask(image_chunk_list,
+                               height,
+                               width,
+                               nr_of_h_bins,
+                               nr_of_w_bins,
+                               network_type):
 
     N = len(image_chunk_list)
 
@@ -263,11 +273,16 @@ def read_image_chunk_fish_mask(image_chunk_list, height, width, nr_of_h_bins, nr
     labels = [np.zeros((nr_of_h_bins, nr_of_w_bins)) for i in range(N)]
 
     for i in range(N):
-        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name, CV_READ_OPTION)
+
+        if CV_READ_OPTION == 0:
+            img = img.reshape((height, width, 1))
+
         images[i] = img
 
         fish_mask = np.zeros((nr_of_h_bins, nr_of_w_bins))
         rects = image_chunk_list[i].rects
+
 
         for rec in rects:
             ix = rec[0]
@@ -280,15 +295,23 @@ def read_image_chunk_fish_mask(image_chunk_list, height, width, nr_of_h_bins, nr
             x2 = ix + iw
             y2 = iy + ih
 
-            x1_bin = int(x1 / width * nr_of_w_bins)
-            x2_bin = int(x2 / width * nr_of_w_bins)
+            x1_bin = int((x1 / width) * nr_of_w_bins)
+            x2_bin = int((x2 / width) * nr_of_w_bins)
 
-            y1_bin = int(y1 / height * nr_of_h_bins)
-            y2_bin = int(y2 / height * nr_of_h_bins)
+            y1_bin = int((y1 / height) * nr_of_h_bins)
+            y2_bin = int((y2 / height) * nr_of_h_bins)
 
             fish_mask[y1_bin:y2_bin, x1_bin:x2_bin] = 1.0
 
+
+        if network_type == "classification":
+            s = np.sum(fish_mask)
+            if int(s) != 0:
+                fish_mask = fish_mask/s
+
         labels[i] = fish_mask
+
+    labels = [labels[i].reshape((nr_of_h_bins*nr_of_w_bins, )) for i in range(N)]
 
     return images, labels
 
@@ -304,7 +327,8 @@ def read_image_chunk_real_labels(image_chunk_list):
     n_rects_per_img = [0 for i in range(N)]
 
     for i in range(N):
-        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name, CV_READ_OPTION)
+
 
         images[i] = img
         ih, iw, _ = images[i].shape
@@ -343,8 +367,9 @@ def read_image_chunk_hist_labels(image_chunk_list, n_bins=256):
     n_rects_per_img = [0 for i in range(N)]
 
     for i in range(N):
-        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name)
+        img = cv2.imread(TRAIN_FOLDER_DIR + image_chunk_list[i].file_name, CV_READ_OPTION)
         #img = cv2.resize(img, None, fx=rfx, fy=rfy, interpolation=cv2.INTER_CUBIC)
+
 
         images[i] = img
         ih, iw, _ = images[i].shape
@@ -412,13 +437,11 @@ def add_sobel_edge_on_images(images):
 
 
 def scale_image_by_255(images):
-    print("In scale_image_by_255")
-    N = len(images)
-    for i in range(N):
-        images[i] = images[i]/255.0
+    #N = len(images)
+    #for i in range(N):
+    #    images[i] = images[i]/255.0
 
-    print("Exting scale_image_by_255")
-    return images
+    return [images[i]/255.0 for i in range(len(images))]
 
 
 

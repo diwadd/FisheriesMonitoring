@@ -288,7 +288,7 @@ image_directories_and_rotation_angles = {"ALB": [0],
                                          "YFT": [-5, 0],
                                          "YFT_cp": [-5, 0]}
 
-ratio = 0.25
+ratio = 0.4
 default_width = 1280
 default_height = 720
 
@@ -318,10 +318,10 @@ new_annotation_files = parse_json(annotation_files,
                                   int(ratio*default_height),
                                   ratio)
 
-shifts_and_resize_factors = [[0.96, 0.96, 0, 0],
-                             [0.96, 0.96, 10, 0],
-                             [0.96, 0.96, 10, 10],
-                             [0.96, 0.96, 0, 10]]
+shifts_and_resize_factors = [[0.95, 0.95, 0, 0],
+                             [0.95, 0.95, 15, 0],
+                             [0.95, 0.95, 15, 15],
+                             [0.95, 0.95, 0, 15]]
 
 
 transform_images_resize_and_shift(new_annotation_files, shifts_and_resize_factors)

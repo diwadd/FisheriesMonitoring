@@ -29,6 +29,7 @@ class NeuralNetworkFishDetection:
 
 
         print("Input image size: " + str(shape_list[0]))
+
         self.network_input = tf.placeholder(tf.float32,
                                             shape=[None,
                                                    shape_list[0][0],
@@ -72,13 +73,7 @@ class NeuralNetworkFishDetection:
                                             scale,
                                             self.epsilon)
 
-            conv_layer = tf.nn.relu(bn)
-            conv_layer_dropped = tf.nn.dropout(conv_layer,
-                                               self.dropout_variable_list[dropout_index],
-                                               name="conv_tf.nn.dropout_" + str(i))
-            dropout_index = dropout_index + 1
-
-            current_layer = conv_layer_dropped
+            current_layer = tf.nn.relu(bn)
             print("Conv layer %6s, shape: %15s" % (str(i), str(current_layer.get_shape())))
 
         current_layer = tf.reshape(current_layer, [-1, shape_list[index_fully_conected_layers][0]])
@@ -140,17 +135,19 @@ class NeuralNetworkFishDetection:
     def __init__(self,
                  network_type,
                  dropout_list,
-                 n_bins,
                  shape_list,
                  index_conv_layers,
-                 index_fully_conected_layers):
+                 index_fully_conected_layers,
+                 nr_of_h_bins,
+                 nr_of_w_bins):
 
         self.width = shape_list[0][1]
         self.height = shape_list[0][0]
 
         self.epsilon = gv.EPSILON_BN
 
-        self.n_bins = n_bins
+        self.nr_of_h_bins = nr_of_h_bins
+        self.nr_of_w_bins = nr_of_w_bins
 
         self.dropout_one = tf.placeholder(tf.float32)
         self.dropout_two = tf.placeholder(tf.float32)
@@ -179,6 +176,8 @@ class NeuralNetworkFishDetection:
             dropout_list_addition = [1.0 for i in range(n_missing_dropout_list_elements)]
             self.dropout_list = self.dropout_list + dropout_list_addition
 
+        print("Extended dropout list:")
+        print(self.dropout_list)
 
         self.binning_array_width = None
         self.binning_array_height = None
@@ -195,7 +194,6 @@ class NeuralNetworkFishDetection:
 
         self.regression_network = False
         self.classification_network = False
-
 
         if network_type == "regression":
             self.network_type = network_type
@@ -216,10 +214,6 @@ class NeuralNetworkFishDetection:
         else:
             pass
 
-        if self.classification_network == True:
-            self.binning_array_width = [i * self.width / self.n_bins for i in range(self.n_bins)]
-            self.binning_array_height = [i * self.height / self.n_bins for i in range(self.n_bins)]
-
         self.parameter_dict = {self.network_input: None,
                                self.network_expected_output: None,
                                self.dropout_one: self.dropout_list[0],
@@ -232,8 +226,6 @@ class NeuralNetworkFishDetection:
                                self.dropout_eight: self.dropout_list[7],
                                self.dropout_nine: self.dropout_list[8]}
 
-
-
     def setup_loss(self, mini_batch_size):
 
         self.mini_batch_size = mini_batch_size
@@ -244,6 +236,7 @@ class NeuralNetworkFishDetection:
             self.C = tf.reduce_sum(tf.multiply(s, s))
             m = tf.constant(2.0 * mini_batch_size, dtype=tf.float32)
             self.C = tf.divide(self.C, m)
+
         elif self.classification_network == True:
             self.C = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.network_output, self.network_expected_output))
         else:
@@ -288,7 +281,7 @@ class NeuralNetworkFishDetection:
 
 
 
-    def uoi_and_loss_for_image_set(self, x_valid):
+    def loss_for_image_set(self, x_valid):
         """
         Calculate the chi2 loss and the uoi for and image set. Normally,
         the image set is large and will not fit into memory. This function splits
@@ -305,55 +298,29 @@ class NeuralNetworkFishDetection:
         n_batches = round(N / mini_batch_size)
 
         ptr = 0
-
-        uoi_sum = 0.0
-        uoi_images = 0.0
         total_loss = 0.0
         for n in range(n_batches):
             mini_batch = x_valid[ptr:ptr + mini_batch_size]
             ptr = ptr + mini_batch_size
 
-            print("Reading images and labels")
             images = None
             labels = None
-            if self.regression_network == True:
-                images, labels, n_rects_per_img = gv.read_image_chunk_real_labels(mini_batch)
-            elif self.classification_network == True:
-                images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.n_bins)
-            else:
-                pass
+
+            images, labels = gv.read_image_chunk_fish_mask(mini_batch,
+                                                           self.height,
+                                                           self.width,
+                                                           self.nr_of_h_bins,
+                                                           self.nr_of_w_bins,
+                                                           self.network_type)
+
             images = gv.scale_image_by_255(images)
 
             self.set_parameter_dict_for_evaluation(images, labels)
 
-            predicted_rects = (self.network_output).eval(session=self.sess, feed_dict=self.parameter_dict)
-
-
-            uoi_sum_batch = None
-            uoi_images_batch = None
-            if self.regression_network == True:
-                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels(labels, predicted_rects, n_rects_per_img)
-
-            elif self.classification_network == True:
-                uoi_sum_batch, uoi_images_batch = gv.uoi_for_set_of_labels_cla_version(labels,
-                                                                                       predicted_rects,
-                                                                                       self.binning_array_width,
-                                                                                       self.binning_array_height,
-                                                                                       n_rects_per_img)
-            else:
-                pass
-
-            uoi_sum = uoi_sum + uoi_sum_batch
-            uoi_images = uoi_images + uoi_images_batch
-
-            #print("uoi_sum %10s uoi_images %10s" % (uoi_sum, uoi_images))
-
             loss = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
             total_loss = total_loss + (2.0*mini_batch_size)*loss
 
-        average_uoi = uoi_sum/uoi_images
-        return average_uoi, total_loss/(2.0*len(x_valid))
-
+        return total_loss/(2.0*len(x_valid))
 
 
     def set_parameter_dict_for_train(self, images, labels):
@@ -418,11 +385,10 @@ class NeuralNetworkFishDetection:
 
         n_batches_per_epoch = round(len(x_train) / mini_batch_size)
 
-        #print("Untrained network:")
-        #average_uoi, total_loss = self.uoi_and_loss_for_image_set(x_valid)
+        print("Untrained network:")
+        total_loss = self.loss_for_image_set(x_valid)
 
-        #print("Average uoi: %15s" % (str(average_uoi)))
-        #print("Total loss: %15s" % (str(total_loss)))
+        print("Total loss: %15s" % (str(total_loss)))
 
         print("\nTraining...")
         print("epoch_step_number: " + str(self.sess.run(self.control_step_number)))
@@ -436,16 +402,13 @@ class NeuralNetworkFishDetection:
                 mini_batch = x_train[ptr:ptr + mini_batch_size]
                 ptr = ptr + mini_batch_size
 
-                print("Reading images and labels")
-                images = None
-                labels = None
-                if self.regression_network == True:
-                    images, labels, n_rects_per_img = gv.read_image_chunk_real_labels(mini_batch)
-                elif self.classification_network == True:
-                    images, labels, n_rects_per_img = gv.read_image_chunk_hist_labels(mini_batch, self.n_bins)
-                else:
-                    pass
 
+                images, labels = gv.read_image_chunk_fish_mask(mini_batch,
+                                                               self.height,
+                                                               self.width,
+                                                               self.nr_of_h_bins,
+                                                               self.nr_of_w_bins,
+                                                               self.network_type)
                 images = gv.scale_image_by_255(images)
 
                 self.set_parameter_dict_for_train(images, labels)
@@ -468,12 +431,14 @@ class NeuralNetworkFishDetection:
             print("control_step_number: " + str(self.control_step_number.eval(session=self.sess)))
             print("Evaluating the validation set.")
 
-            print("decaying_learning_rate: " + str(self.decaying_learning_rate.eval(session=self.sess)))
-            print("global_step: " + str(self.global_step.eval(session=self.sess)))
+            glr = self.decaying_learning_rate.eval(session=self.sess)
+            print("decaying_learning_rate: " + str(glr))
 
-            average_uoi, total_loss = self.uoi_and_loss_for_image_set(x_valid)
+            gs = self.global_step.eval(session=self.sess)
+            print("global_step: " + str(gs))
 
-            print("Average uoi: %15s" % (str(average_uoi)))
+            total_loss = self.loss_for_image_set(x_valid)
+
             print("Total loss: %15s" % (str(total_loss)))
 
             #print("c_val_valid value: " + str(c_val_valid))
