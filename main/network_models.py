@@ -116,7 +116,7 @@ class NeuralNetworkFishDetection:
 
         if network_type == "classification":
             self.network_output = tf.matmul(current_layer, w_readout) + bias_readout
-            self.network_expected_output = tf.placeholder(tf.float32,
+            self.network_expected_output = tf.placseholder(tf.float32,
                                                           shape=[None, shape_list[-1][1]],
                                                           name="network_expected_output")
             self.network_output_for_prediction = tf.nn.softmax(self.network_output)
@@ -125,7 +125,7 @@ class NeuralNetworkFishDetection:
             self.network_expected_output = tf.placeholder(tf.float32,
                                                           shape=[None, shape_list[-1][1]],
                                                           name="network_expected_output")
-            self.network_output_for_prediction = self.network_output
+            self.network_output_for_prediction = tf.nn.sigmoid(self.network_output)
 
         else:
             pass
@@ -232,10 +232,13 @@ class NeuralNetworkFishDetection:
         if self.regression_network == True:
             # Set you the chi2 like loss
 
-            s = tf.subtract(self.network_output, self.network_expected_output)
-            self.C = tf.reduce_sum(tf.multiply(s, s))
-            m = tf.constant(2.0 * mini_batch_size, dtype=tf.float32)
-            self.C = tf.divide(self.C, m)
+            #s = tf.subtract(self.network_output, self.network_expected_output)
+            #self.C = tf.reduce_sum(tf.multiply(s, s))
+            #m = tf.constant(2.0 * mini_batch_size, dtype=tf.float32)
+            #self.C = tf.divide(self.C, m)
+
+            self.C = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=self.network_expected_output,
+                                                                            logits=self.network_output))
 
         elif self.classification_network == True:
             self.C = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.network_output, self.network_expected_output))
@@ -318,6 +321,8 @@ class NeuralNetworkFishDetection:
             self.set_parameter_dict_for_evaluation(images, labels)
 
             loss = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
+            #print("internal loss: " + str(loss))
+            #print("mini_batch: " + str(mini_batch))
             total_loss = total_loss + (2.0*mini_batch_size)*loss
 
         return total_loss/(2.0*len(x_valid))
@@ -397,6 +402,7 @@ class NeuralNetworkFishDetection:
         for epoch in range(n_epochs):
             ptr = 0
 
+            train_loss = 0.0
             for batch in range(n_batches_per_epoch):
                 start = time.time()
                 mini_batch = x_train[ptr:ptr + mini_batch_size]
@@ -422,6 +428,7 @@ class NeuralNetworkFishDetection:
 
                 c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
                 print("(in batch loop, %10s) c_val_train value: %10s" % (str(batch), str(c_val_train)))
+                train_loss = train_loss + (2.0*len(mini_batch))*c_val_train
 
                 stop = time.time()
                 print("Mini batch time: " + str(stop - start))
@@ -437,9 +444,10 @@ class NeuralNetworkFishDetection:
             gs = self.global_step.eval(session=self.sess)
             print("global_step: " + str(gs))
 
+            train_loss = train_loss/(2.0*len(x_train))
             total_loss = self.loss_for_image_set(x_valid)
 
-            print("Total loss: %15s" % (str(total_loss)))
+            print("Total loss: %15s Train loss: %15s" % (str(total_loss), str(train_loss)))
 
             #print("c_val_valid value: " + str(c_val_valid))
 

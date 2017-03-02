@@ -17,7 +17,7 @@ print("VALIDATION_SIZE %15s" % (str(VALIDATION_SIZE)))
 print("TEST_SIZE %15s" % (str(TEST_SIZE)))
 print("CHUNK_SIZE %15s" % (str(CHUNK_SIZE)))
 
-"""
+
 annotation_files = ["y_ind_fish_positions_ALB_320_x_180.json",
                     "y_ind_fish_positions_LAG_320_x_180.json",
                     "y_ind_fish_positions_YFT_320_x_180.json",
@@ -34,8 +34,9 @@ annotation_files = ["y_ind_fish_positions_ALB_320_x_180.json",
                     "y_ind_fish_positions_DOL_320_x_180_cp.json",
                     "y_ind_fish_positions_SHARK_320_x_180_cp.json",
                     "y_ind_fish_positions_Nof_320_x_180_cp.json"]
-"""
 
+
+"""
 annotation_files = ["y_ind_fish_positions_ALB_512_x_288.json",
                     "y_ind_fish_positions_LAG_512_x_288.json",
                     "y_ind_fish_positions_YFT_512_x_288.json",
@@ -52,6 +53,7 @@ annotation_files = ["y_ind_fish_positions_ALB_512_x_288.json",
                     "y_ind_fish_positions_DOL_512_x_288_cp.json",
                     "y_ind_fish_positions_SHARK_512_x_288_cp.json",
                     "y_ind_fish_positions_Nof_512_x_288_cp.json"]
+"""
 
 print(annotation_files)
 
@@ -102,10 +104,10 @@ print("x_test size: %s" % (str(len(x_test))))
 
 channels = 3
 dropout_list = [0.8]
-width = 512
-height = 288
-nr_of_h_bins = int(height*0.125)
-nr_of_w_bins = int(width*0.125)
+width = 320
+height = 180
+nr_of_h_bins = int(height*0.35)
+nr_of_w_bins = int(width*0.35)
 
 print("channels:" + str(channels))
 print("dropout_list: " + str(dropout_list))
@@ -168,13 +170,13 @@ if network_type == "regression":
                   [6*2048, nr_of_h_bins * nr_of_w_bins]]
     """
 
+    shape_list = [[height, width, 1],
+                  [[3, 3, 1, 8],[1, 4, 4, 1]],
+                  [[3, 3, 8, 16],[1, 2, 2, 1]],
+                  [[3, 3, 16, 32],[1, 2, 2, 1]],
+                  [12 * 20 * 32, 1024],
+                  [1024, nr_of_h_bins * nr_of_w_bins]]
 
-    shape_list = [[288, 512, 1],
-                  [[5, 5, 1, 8],[1, 4, 4, 1]],
-                  [[5, 5, 8, 12],[1, 4, 4, 1]],
-                  [[5, 5, 12, 16],[1, 4, 4, 1]],
-                  [5 * 8 * 16, 2*2048],
-                  [2*2048, nr_of_h_bins * nr_of_w_bins]]
 
 
     index_conv_layers = 1
@@ -230,13 +232,13 @@ network = nm.NeuralNetworkFishDetection(network_type,
                                         nr_of_w_bins)
 
 n_epochs = 10000
-mini_batch_size = 1000
+mini_batch_size = 800
 print("n_epochs        %15s" % (str(n_epochs)))
 print("mini_batch_size %15s" % (str(mini_batch_size)))
 
-learning_rate = 0.001
+learning_rate = 0.075
 decay_rate = 0.6
-decay_steps = 180
+decay_steps = 108*20
 
 print("learning_rate   %15s" % (str(learning_rate)))
 print("decay_rate: %10s" % (str(decay_rate)))
@@ -253,7 +255,7 @@ network.train(x_train,
               learning_rate,
               "training",
               #"training_continuation_or_prediction",
-              gv.MAIN_FOLDER_DIR + "xft_network_model_network_model_reg_small.tf",
+              gv.MAIN_FOLDER_DIR + "converging_xft_network_model_network_model_reg_small.tf",
               decay_steps,
               decay_rate)
 
