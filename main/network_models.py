@@ -466,33 +466,35 @@ class NeuralNetworkFishDetection:
 
         N = len(x_test)
 
-        predicted_labels = [np.zeros((9, 4)) for i in range(N)]
-        #predicted_labels = np.zeros((N, 9, 4))
+        predicted_labels = [np.zeros((self.height, self.width)) for i in range(N)]
         pl_index = 0
 
-        mini_batch_size = gv.MINI_BATCHES_FOR_LARGE_SET_PROCESSING
+        mini_batch_size = 10
         n_batches = round(N / mini_batch_size)
+
+        print("before loop")
 
         ptr = 0
         for n in range(n_batches):
             mini_batch = x_test[ptr:ptr + mini_batch_size]
-            images, labels = gv.read_image_chunk_real_labels(mini_batch)
-
-            if self.sobel_edge_flag == True:
-                images = gv.add_sobel_edge_on_images(images)
+            images, labels = gv.read_image_chunk_fish_mask(mini_batch,
+                                                           self.height,
+                                                           self.width,
+                                                           self.nr_of_h_bins,
+                                                           self.nr_of_w_bins,
+                                                           self.network_type)
 
             ptr = ptr + mini_batch_size
 
-            #print("Processed %15s mini_batches o validation set out of %15s" % (str(n), str(n_batches)), end="\r")
+            self.set_parameter_dict_for_evaluation(images, labels)
 
-            self.parameter_dict[self.network_input] = images
-            self.parameter_dict[self.network_expected_output] = labels
-
-            predicted_labels_mini_batch = None
+            print("in loop")
             if self.regression_network == True:
-                predicted_labels_mini_batch = (self.network_output).eval(session=self.sess,
+                print("regression")
+                predicted_labels_mini_batch = (self.network_output_for_prediction).eval(session=self.sess,
                                                                          feed_dict=self.parameter_dict)
             elif self.classification_network == True:
+                print("classification")
                 predicted_labels_mini_batch = (self.network_output_for_prediction).eval(session=self.sess,
                                                                          feed_dict=self.parameter_dict)
             else:
@@ -503,13 +505,11 @@ class NeuralNetworkFishDetection:
 
 
             for j in range(len(predicted_labels_mini_batch)):
-                predicted_labels[pl_index] = predicted_labels_mini_batch[j].reshape((9,4))
+                predicted_labels[pl_index] = predicted_labels_mini_batch[j].reshape((self.nr_of_h_bins, self.nr_of_w_bins))
                 pl_index = pl_index + 1
 
 
         return predicted_labels
-
-
 
 
 

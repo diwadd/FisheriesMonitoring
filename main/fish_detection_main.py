@@ -18,6 +18,9 @@ print("TEST_SIZE %15s" % (str(TEST_SIZE)))
 print("CHUNK_SIZE %15s" % (str(CHUNK_SIZE)))
 
 
+
+
+
 annotation_files = ["y_ind_fish_positions_ALB_320_x_180.json",
                     "y_ind_fish_positions_LAG_320_x_180.json",
                     "y_ind_fish_positions_YFT_320_x_180.json",
@@ -171,7 +174,8 @@ if network_type == "regression":
     """
 
     shape_list = [[height, width, 1],
-                  [[3, 3, 1, 8],[1, 4, 4, 1]],
+                  [[3, 3, 1, 4],[1, 2, 2, 1]],
+                  [[3, 3, 4, 8],[1, 2, 2, 1]],
                   [[3, 3, 8, 16],[1, 2, 2, 1]],
                   [[3, 3, 16, 32],[1, 2, 2, 1]],
                   [12 * 20 * 32, 1024],
@@ -180,7 +184,7 @@ if network_type == "regression":
 
 
     index_conv_layers = 1
-    index_fully_conected_layers = 4
+    index_fully_conected_layers = 5
 
 elif network_type == "classification":
     """
@@ -258,4 +262,12 @@ network.train(x_train,
               gv.MAIN_FOLDER_DIR + "converging_xft_network_model_network_model_reg_small.tf",
               decay_steps,
               decay_rate)
+
+
+#detected_fish = network.predict(x_test[0:30],
+#                                gv.MAIN_FOLDER_DIR + "converging_xft_network_model_network_model_reg_small.tf")
+#print(detected_fish[0].shape)
+#print(detected_fish[0])
+
+#read_annotation_file(detected_fish[0], x_test[0].file_name, 0.35)
 

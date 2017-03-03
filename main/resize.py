@@ -171,6 +171,7 @@ def transform_images_resize_and_shift(annotation_files, shifts_and_resize_factor
             #print(iman)
 
             rects = iman.rects
+            #print("File name: " + str(iman.file_name))
 
             #print(gv.TRAIN_FOLDER_DIR + iman.file_name)
             img = cv2.imread(gv.TRAIN_FOLDER_DIR + iman.file_name)
@@ -279,7 +280,9 @@ image_directories_and_rotation_angles = {"ALB": [0],
                                          "DOL_cp": [-13, -11, -9, -7, -5, -3, -1, 0, 2, 4, 6, 8, 10, 12],
                                          "LAG": [-12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                                          "LAG_cp": [-12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                                         #"NoF": [-17.5, -15.0, -12.5, -10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10, 12.5, 15.0, 17.5],
                                          "NoF": [-5, 0, 2.5, 5],
+                                         #"NoF_cp": [-17.5, -15.0, -12.5, -10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10, 12.5, 15.0, 17.5],
                                          "NoF_cp": [-5, 0, 2.5, 5],
                                          "OTHER": [-4, -2, 0, 3, 5, 7],
                                          "OTHER_cp": [-4, -2, 0, 3, 5, 7],
@@ -288,7 +291,7 @@ image_directories_and_rotation_angles = {"ALB": [0],
                                          "YFT": [-5, 0],
                                          "YFT_cp": [-5, 0]}
 
-ratio = 0.4
+ratio = 0.25
 default_width = 1280
 default_height = 720
 

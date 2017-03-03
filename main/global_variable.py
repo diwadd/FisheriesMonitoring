@@ -7,15 +7,17 @@ import json
 import cv2
 import numpy as np
 
+from matplotlib import pyplot as plt
+
 EPSILON_BN = 1e-3
 DEFAULT_IMAGE_WIDTH = 1280
 DEFAULT_IMAGE_HEIGHT = 720
 
 COLOR_PERTURBATION_STD = 0.1
 
-TRAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/train/"
+TRAIN_FOLDER_DIR = "/home/tadek/Coding/Kaggle/FisheriesMonitoring/train/"
 
-MAIN_FOLDER_DIR = "/home/tadek/Coding_Competitions/Kaggle/FisheriesMonitoring/main/"
+MAIN_FOLDER_DIR = "/home/tadek/Coding/Kaggle/FisheriesMonitoring/main/"
 
 MINI_BATCHES_FOR_LARGE_SET_PROCESSING = 600
 
@@ -444,6 +446,45 @@ def scale_image_by_255(images):
     return [images[i]/255.0 for i in range(len(images))]
 
 
+
+
+def read_annotation_file(spot_fish, file_name, rf):
+
+    img = cv2.imread(gv.TRAIN_FOLDER_DIR + file_name)
+
+    cv2.imshow('img', img / 255.0)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    print("Image size: " + str(img.shape))
+    h, w, c = img.shape
+
+    nr_of_h_bins = int(h * rf)
+    nr_of_w_bins = int(w * rf)
+
+
+    #rec = cv2.rectangle(img, (int(ix), int(iy)), (int(ix + iw), int(iy + ih)), (0, 255, 0), 3)
+
+    plt.imshow(spot_fish, cmap='gray')
+    plt.show()
+
+    rfx = nr_of_w_bins / w
+    rfy = nr_of_h_bins / h
+
+    spot_fish = cv2.resize(spot_fish, None, fx=(1.0 / rfx), fy=(1.0 / rfy), interpolation=cv2.INTER_CUBIC)
+    spot_fish[spot_fish > 0.1] = 1.0
+    spot_fish[spot_fish <= 0.1] = 0.0
+
+    plt.imshow(spot_fish, cmap='gray')
+    plt.show()
+
+    img[:, :, 0] = spot_fish * img[:, :, 0]
+    img[:, :, 1] = spot_fish * img[:, :, 1]
+    img[:, :, 2] = spot_fish * img[:, :, 2]
+
+    cv2.imshow('img', img / 255.0)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 
