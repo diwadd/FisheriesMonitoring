@@ -174,8 +174,7 @@ if network_type == "regression":
     """
 
     shape_list = [[height, width, 1],
-                  [[3, 3, 1, 4],[1, 2, 2, 1]],
-                  [[3, 3, 4, 8],[1, 2, 2, 1]],
+                  [[5, 5, 1, 8],[1, 4, 4, 1]],
                   [[3, 3, 8, 16],[1, 2, 2, 1]],
                   [[3, 3, 16, 32],[1, 2, 2, 1]],
                   [12 * 20 * 32, 1024],
@@ -184,7 +183,7 @@ if network_type == "regression":
 
 
     index_conv_layers = 1
-    index_fully_conected_layers = 5
+    index_fully_conected_layers = 4
 
 elif network_type == "classification":
     """
@@ -211,7 +210,7 @@ elif network_type == "classification":
 
 
     shape_list = [[288, 512, 1],
-                  [[5, 5, 1, 4],[1, 2, 2, 1]],
+                  [[3, 3, 1, 4],[1, 2, 2, 1]],
                   [[3, 3, 4, 8],[1, 2, 2, 1]],
                   [[3, 3, 8, 16],[1, 2, 2, 1]],
                   [[3, 3, 16, 32],[1, 2, 2, 1]],
@@ -241,8 +240,8 @@ print("n_epochs        %15s" % (str(n_epochs)))
 print("mini_batch_size %15s" % (str(mini_batch_size)))
 
 learning_rate = 0.075
-decay_rate = 0.6
-decay_steps = 108*20
+decay_rate = 0.075
+decay_steps = 135*80
 
 print("learning_rate   %15s" % (str(learning_rate)))
 print("decay_rate: %10s" % (str(decay_rate)))
@@ -257,8 +256,8 @@ network.train(x_train,
               n_epochs,
               mini_batch_size,
               learning_rate,
-              "training",
-              #"training_continuation_or_prediction",
+              #"training",
+              "training_continuation_or_prediction",
               gv.MAIN_FOLDER_DIR + "converging_xft_network_model_network_model_reg_small.tf",
               decay_steps,
               decay_rate)

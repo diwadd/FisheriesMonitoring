@@ -255,7 +255,9 @@ class NeuralNetworkFishDetection:
                                                             decay_rate,
                                                             staircase=True)
 
-        self.train_step = tf.train.AdamOptimizer(self.decaying_learning_rate).minimize(self.C, global_step=self.global_step)
+        self.train_step = tf.train.AdamOptimizer(self.decaying_learning_rate).minimize(self.C, 
+                                                                                       global_step=self.global_step,
+                                                                                       aggregation_method=tf.AggregationMethod.EXPERIMENTAL_ACCUMULATE_N)
 
 
     def setup_session(self, mode, network_model_file_name):
